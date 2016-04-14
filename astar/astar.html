@@ -1,6 +1,11 @@
 <html>
 
 <body style="background-color: 0; margin: 0; padding: 0">
+
+<div style="position: fixed; top: 0; left: 0; opacity: 0.9; background-color: 0">
+	<input id="timeSlider" type="range" min="1" max="100">
+</div>
+
 <canvas id="canvas" width="100" height="100"></canvas>
 
 <script>
@@ -8,6 +13,8 @@
 var canvas = document.getElementById("canvas")
 var ctx = canvas.getContext("2d");
 
+var timeSlider = document.getElementById("timeSlider")
+console.log(timeSlider.value)
 var margin = 2
 var cellSize = 0
 var gridWidth = 70
@@ -188,7 +195,8 @@ function startASTAR()
 
 	drawStuff()
 
-	window.setTimeout(startASTAR, 10)
+
+	window.setTimeout(startASTAR, 1000.0 / timeSlider.value)
 }
 
 function resizeCanvas() {
