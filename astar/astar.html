@@ -1,0 +1,358 @@
+<html>
+
+<body style="background-color: 0; margin: 0; padding: 0">
+<canvas id="canvas" width="100" height="100"></canvas>
+
+<script>
+
+var canvas = document.getElementById("canvas")
+var ctx = canvas.getContext("2d");
+
+var margin = 2
+var cellSize = 0
+var gridWidth = 70
+var gridHeight = 40
+var weight = 100000000
+var cstcoast = 0
+
+var src = null
+var dst = null
+
+var heads = []
+var head = null
+var neighbors = []
+var neighbor = null
+var candidates = []
+var current = null
+var path = []
+var path_index = 0
+
+var graph = []
+
+for (var i=0 ; i<gridHeight ; i++)
+{
+	for(var j=0 ; j<gridWidth ; j++)
+	{
+		id = i*gridWidth + j
+		zmin=0.2
+		zmax=0.3
+		z = Math.random()
+		if(z < zmin) z = 0
+		else if(z > zmax) z = 1
+		else z = (z-zmin)/(zmax-zmin)
+		graph.push({id: id, x: j, y: i, z: z, visited: false, head: false, complete: false, parent: null, path: false})
+	}
+}
+
+
+window.addEventListener('resize', resizeCanvas, false);
+
+canvas.addEventListener('click', clickCanvas);
+
+function clickCanvas(e) {
+	y = Math.floor(e.y / cellSize)
+	x = Math.floor(e.x / cellSize)
+	console.log(y)
+	console.log(x)
+	id = y * gridWidth + x
+	// graph[id].z = 0
+	if (src == null) {
+		src = node(x,y)
+		src.coast = 0
+	}
+	else if (dst == null) { 
+		dst = node(x,y)
+		heads.push(src)
+		head = src
+		window.setTimeout(startASTAR, 1000)
+	}
+	drawStuff();
+}
+
+function node(x,y)
+{
+	return graph[y*gridWidth+x]
+}
+
+function startASTAR()
+{
+	
+	if (neighbors.length > 0)
+	{
+		console.log("get next head")
+		neighbor = neighbors.pop()
+		if(!neighbor.visited) candidates.push(neighbor)
+		neighbor.head = true
+		console.log(neighbor)
+		if (neighbor.visited)
+		{
+			newcoast = neighbor.from.coast + cstcoast + Math.abs(neighbor.from.z - neighbor.z) * weight
+			if(newcoast < neighbor.coast)
+			{
+				neighbor.parent = neighbor.from
+				neighbor.coast = newcoast
+				neighbor.dist = neighbor.coast + neighbor.h
+			}
+		}
+		else
+		{
+			neighbor.parent = neighbor.from
+			neighbor.coast = neighbor.parent.coast + cstcoast + Math.abs(neighbor.parent.z - neighbor.z) * weight
+
+			dx = neighbor.x - dst.x
+			dy = neighbor.y - dst.y
+			// neighbor.h = Math.abs(dx) + Math.abs(dy)
+			neighbor.h = cstcoast * (Math.abs(dx) + Math.abs(dy)) + Math.sqrt(dx*dx+dy*dy); // Math.sqrt(dx*dx+dy*dy)
+			neighbor.dist = neighbor.coast + neighbor.h
+
+			neighbor.visited = true
+		}
+		neighbor.from = null
+	}
+	else if(head == null)
+	{
+		neighbor = null
+		if (candidates.length > 0)
+		{
+			candidates.sort(function(a,b){
+				return a.dist - b.dist
+			})
+
+			console.log(candidates.map(function(e,i,t){return e.dist}))
+
+			console.log("find best one")
+			head = candidates.shift();
+			console.log(head.dist)
+			if (head == dst)
+			{
+				head = null
+				candidates = []
+				current = dst
+			}
+
+		}
+		else if(current)
+		{
+			path.unshift(current)
+			current.path = true
+			current = current.parent
+		}
+		else
+		{
+			remove = false
+			if(remove)
+			{
+				for (var i=0 ; i<gridHeight ; i++)
+				{
+					for(var j=0 ; j<gridWidth ; j++)
+					{
+						n = node(j,i)
+						if(!n.path)
+						{
+							n.complete = n.head = false
+							n.parent = n.from = null
+						}
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		console.log("add neighboors")
+		var adj
+		if(head.x>0 && !(adj=node(head.x-1,head.y)).complete)
+		{
+			adj.from = head
+			neighbors.push(adj)
+		}
+		if(head.y>0 && !(adj=node(head.x,head.y-1)).complete)
+		{
+			adj.from = head
+			neighbors.push(adj)
+		}
+		if(head.x<gridWidth-1 && !(adj=node(head.x+1,head.y)).complete)
+		{
+			adj.from = head
+			neighbors.push(adj)
+		}
+		if(head.y<gridHeight-1 && !(adj=node(head.x,head.y+1)).complete)
+		{
+			adj.from = head
+			neighbors.push(adj)
+		}
+		head.complete = true
+//		candidates.splice(candidates.indexOf(head), 1)
+		head = null
+	}
+
+	drawStuff()
+
+	window.setTimeout(startASTAR, 10)
+}
+
+function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+
+        cellSize = Math.min(canvas.width / gridWidth, canvas.height / gridHeight)
+        /**
+         * Your drawings need to be inside this function otherwise they will be reset when 
+         * you resize the browser window and the canvas goes will be cleared.
+         */
+        drawStuff(); 
+}
+resizeCanvas();
+
+function drawStuff() {
+      
+	ctx.fillStyle = "rgb(0,0,0)";
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+	var s = 2
+
+
+	ctx.fillStyle = "rgb(40,40,40)";
+
+	for (var i=0 ; i<gridHeight ; i++)
+	{
+		for(var j=0 ; j<gridWidth ; j++)
+		{
+			n = node(j,i)
+			id = i*gridWidth + j
+			l = Math.floor(n.z * 256)
+			ctx.fillStyle = "rgb("+l+","+l+","+l+")";
+			ctx.fillRect (j*cellSize + margin/2, i*cellSize + margin/2, cellSize-margin, cellSize-margin);
+
+			if(n == dst)
+			{
+				ctx.fillStyle = "rgb(255,0,0)";
+				ctx.beginPath()
+				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.fill()
+			}
+			if(n.path)
+			{
+				ctx.fillStyle = "rgb(255,127,0)";
+				ctx.beginPath()
+				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.fill()
+			}
+			else if(n.complete)
+			{
+				ctx.fillStyle = "rgb(127,127,127)";
+				ctx.beginPath()
+				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.fill()
+			}
+			else if(head && n.id == head.id)
+			{
+				ctx.fillStyle = "rgb(0,0,255)";
+				ctx.beginPath()
+				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.fill()
+
+			}
+			else if(neighbor && n.id == neighbor.id)
+			{
+				ctx.fillStyle = "rgb(255,255,0)";
+				ctx.beginPath()
+				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.fill()
+
+				
+			}
+			else if(n.head)
+			{
+				ctx.fillStyle = "rgb(0,255,255)";
+				ctx.beginPath()
+				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.fill()
+			}
+		}
+	}
+
+	for (var i=0 ; i<gridHeight ; i++)
+	{
+		for(var j=0 ; j<gridWidth ; j++)
+		{
+			n = node(j,i)
+
+			if (n == src || n == dst)
+			{
+				ctx.strokeStyle = n == src ? "rgb(0,0,255)" : "rgb(255,0,0)";
+				ctx.lineWidth = 2;
+				ctx.beginPath()
+				ctx.arc((n.x+0.5)*cellSize, (n.y+0.5)*cellSize, cellSize / 3,0,2*Math.PI)
+				ctx.stroke()
+			}
+			if (n == current)
+			{
+				ctx.strokeStyle = "rgb(255,0,255)";
+				ctx.lineWidth = 2;
+				ctx.beginPath()
+				ctx.arc((n.x+0.5)*cellSize, (n.y+0.5)*cellSize, cellSize / 3,0,2*Math.PI)
+				ctx.stroke()
+			}
+
+			if(n.from)
+			{
+
+			}
+			if(n.parent)
+			{
+				var scale = 0.1
+				var lscale = 3
+				var dx = (n.x - n.parent.x) * scale
+				var dy = (n.y - n.parent.y) * scale
+
+				var from1 = {x: (n.x+dy+0.5-dx*lscale)*cellSize, y: (n.y+dx+0.5-dy*lscale)*cellSize}
+				var from2 = {x: (n.x-dy+0.5-dx*lscale)*cellSize, y: (n.y-dx+0.5-dy*lscale)*cellSize}
+				var to    = {x: (n.parent.x+0.5+dx*lscale)*cellSize, y: (n.parent.y+0.5+dy*lscale)*cellSize}
+
+				ctx.fillStyle = "rgb(0,255,0)";
+				
+				ctx.beginPath();
+				ctx.moveTo(to.x, to.y);
+				ctx.lineTo(from1.x, from1.y);
+				ctx.lineTo(from2.x, from2.y);
+				ctx.fill();
+			}
+		}
+	}
+	if(neighbor)
+	{
+		var from = {x: (neighbor.x+0.5)*cellSize, y: (neighbor.y+0.5)*cellSize}
+		var to   = {x: (dst.x+0.5)*cellSize,      y: (dst.y+0.5)*cellSize}
+		var grad= ctx.createLinearGradient(from.x, from.y, to.x, to.y);
+		grad.addColorStop(0, "yellow");
+		grad.addColorStop(1, "red");
+
+		ctx.strokeStyle = grad;
+		ctx.lineWidth = 5;
+		
+		ctx.beginPath();
+		ctx.moveTo(from.x, from.y);
+		ctx.lineTo(to.x, to.y);
+		ctx.stroke();
+	}
+
+/*
+	ctx.fillStyle = "rgb(0,0,200)";
+	ctx.fillRect (100, 100, s, s);
+
+	ctx.fillStyle = "rgba(255, 127, 0, 0.8)";
+    ctx.font="20px Verdana";
+    ctx.fillText("Score : " + "toto",500,50);
+    ctx.fillText("Frame : " + "tata",500,100);
+    */
+}
+
+
+</script>
+
+</body>
+
+
+</html>
