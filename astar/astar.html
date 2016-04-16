@@ -4,11 +4,75 @@
 
 <div style="position: fixed; top: 0; left: 0; opacity: 0.9; background-color: 0">
 	<input id="timeSlider" type="range" min="1" max="100">
+	<button onclick="bt()">ok</button>
 </div>
 
-<canvas id="canvas" width="100" height="100"></canvas>
-
+<canvas id="canvas" width="100" height="100" draggable="false" onmousemove="canvasDrag(event)"></canvas>
+<script   src="https://code.jquery.com/jquery-2.2.3.min.js"   integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="   crossorigin="anonymous"></script>
+<script src="webpd.js"></script>
 <script>
+
+patchStr = "#N canvas 344 249 450 300 10;\n\
+#X obj 85 39 osc~ 440;\n\
+#X obj 210 131 line~;\n\
+#X obj 137 122 *~;\n\
+#X obj 120 220 dac~;\n\
+#X obj 310 14 r pop;\n\
+#X msg 320 156 0 30;\n\
+#X msg 238 64 1 1;\n\
+#X obj 163 178 *~ 0.5;\n\
+#X obj 299 115 delay 1;\n\
+#X connect 0 0 2 0;\n\
+#X connect 1 0 2 1;\n\
+#X connect 2 0 7 0;\n\
+#X connect 4 0 6 0;\n\
+#X connect 5 0 1 0;\n\
+#X connect 6 0 1 0;\n\
+#X connect 6 0 8 0;\n\
+#X connect 7 0 3 0;\n\
+#X connect 7 0 3 1;\n\
+#X connect 8 0 5 0;\n\
+"
+
+$.get('astar.pd', function(patchStr) {
+  patch = Pd.loadPatch(patchStr)
+  Pd.start()
+})
+
+
+function bt()
+{
+	init()
+}
+
+function pd_event(name){
+	
+	if(head){
+		console.log("pan:" + head.x / gridWidth)
+		Pd.send("panl", [head.x / gridWidth])
+		Pd.send("panr", [1.0 - head.x / gridWidth])
+	}
+	else
+	{
+		Pd.send("panl", [0])
+		Pd.send("panr", [0])
+	}
+	
+	Pd.send(name, [])
+}
+
+if (!String.format) {
+  String.format = function(format) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return format.replace(/{(\d+)}/g, function(match, number) { 
+      return typeof args[number] != 'undefined'
+        ? args[number] 
+        : match
+      ;
+    });
+  };
+}
+
 
 var canvas = document.getElementById("canvas")
 var ctx = canvas.getContext("2d");
@@ -17,10 +81,11 @@ var timeSlider = document.getElementById("timeSlider")
 console.log(timeSlider.value)
 var margin = 2
 var cellSize = 0
-var gridWidth = 70
-var gridHeight = 40
-var weight = 100000000
+var gridWidth = 28//58//70
+var gridHeight = 15//30//40
+var weight = 10 // 100000000
 var cstcoast = 0
+var aiWords = ""
 
 var src = null
 var dst = null
@@ -33,6 +98,7 @@ var candidates = []
 var current = null
 var path = []
 var path_index = 0
+var subject = null
 
 var graph = []
 
@@ -42,15 +108,47 @@ for (var i=0 ; i<gridHeight ; i++)
 	{
 		id = i*gridWidth + j
 		zmin=0.2
-		zmax=0.3
+		zmax=0.5
 		z = Math.random()
 		if(z < zmin) z = 0
 		else if(z > zmax) z = 1
-		else z = (z-zmin)/(zmax-zmin)
+		else z = (z-zmin+0.5)/(zmax-zmin+0.5)
 		graph.push({id: id, x: j, y: i, z: z, visited: false, head: false, complete: false, parent: null, path: false})
 	}
 }
 
+canvas.addEventListener("mousewheel", mouseWheelHandler, false);
+
+var ofx=0
+var ofy=0
+
+function mouseWheelHandler(e)
+{
+	console.log(e)
+	if(e.wheelDeltaY < 0)
+	{
+		cellSize /= 2.0
+	}
+	else
+	{
+		cellSize *= 2.0
+	}
+	drawStuff();
+}
+
+function canvasDrag(e)
+{
+	if(e.button != 0)
+	{
+		ofx+=e.x-p.x
+		ofy+=e.y-p.y
+		console.log(e)
+		
+	}
+	p = {x: e.x, y:e.y}
+	drawStuff();
+}
+var p = {}
 
 window.addEventListener('resize', resizeCanvas, false);
 
@@ -74,6 +172,7 @@ function clickCanvas(e) {
 		window.setTimeout(startASTAR, 1000)
 	}
 	drawStuff();
+	p = {x: e.x, y:e.y}
 }
 
 function node(x,y)
@@ -81,11 +180,43 @@ function node(x,y)
 	return graph[y*gridWidth+x]
 }
 
+function init()
+{
+	possibles = []
+	for (var i=0 ; i<gridHeight ; i++)
+	{
+		for(var j=0 ; j<gridWidth ; j++)
+		{
+			n = node(j,i)
+			n.parent = null
+			n.complete = false
+			n.visited = false
+			n.from = null
+			n.path = false
+			n.head = false
+			if(n.z == 1)
+			{
+				possibles.push(n)
+			}
+		}
+	}
+	src = possibles[Math.floor(Math.random() * possibles.length)]
+	src.coast = 0
+	dst = possibles[Math.floor(Math.random() * possibles.length)]
+	heads.push(src)
+	head = src
+	window.setTimeout(startASTAR, 1000)
+}
+
+
+
 function startASTAR()
 {
 	
+	subject = null
 	if (neighbors.length > 0)
 	{
+		pd_event("adj");
 		console.log("get next head")
 		neighbor = neighbors.pop()
 		if(!neighbor.visited) candidates.push(neighbor)
@@ -112,15 +243,21 @@ function startASTAR()
 			neighbor.h = cstcoast * (Math.abs(dx) + Math.abs(dy)) + Math.sqrt(dx*dx+dy*dy); // Math.sqrt(dx*dx+dy*dy)
 			neighbor.dist = neighbor.coast + neighbor.h
 
+			aiWords = String.format("This one coast me {0} and is {1} far to target, so path to destination would coast me {2} ...", neighbor.coast, neighbor.h, neighbor.dist)
+			subject = neighbor
+
 			neighbor.visited = true
 		}
 		neighbor.from = null
 	}
 	else if(head == null)
 	{
+		
 		neighbor = null
 		if (candidates.length > 0)
 		{
+			pd_event("head");
+
 			candidates.sort(function(a,b){
 				return a.dist - b.dist
 			})
@@ -140,9 +277,15 @@ function startASTAR()
 		}
 		else if(current)
 		{
+			pd_event("path");
 			path.unshift(current)
 			current.path = true
 			current = current.parent
+			if(current == null){
+				drawStuff()
+				init()
+				return
+			} 
 		}
 		else
 		{
@@ -166,31 +309,49 @@ function startASTAR()
 	}
 	else
 	{
+		pd_event("check");
 		console.log("add neighboors")
 		var adj
 		if(head.x>0 && !(adj=node(head.x-1,head.y)).complete)
 		{
-			adj.from = head
-			neighbors.push(adj)
+			if(adj.z > 0){
+				adj.from = head
+				neighbors.push(adj)
+			}
 		}
 		if(head.y>0 && !(adj=node(head.x,head.y-1)).complete)
 		{
-			adj.from = head
-			neighbors.push(adj)
+			if(adj.z > 0){
+				adj.from = head
+				neighbors.push(adj)
+			}
 		}
 		if(head.x<gridWidth-1 && !(adj=node(head.x+1,head.y)).complete)
 		{
-			adj.from = head
-			neighbors.push(adj)
+			if(adj.z > 0){
+				adj.from = head
+				neighbors.push(adj)
+			}
 		}
 		if(head.y<gridHeight-1 && !(adj=node(head.x,head.y+1)).complete)
 		{
-			adj.from = head
-			neighbors.push(adj)
+			if(adj.z > 0){
+				adj.from = head
+				neighbors.push(adj)
+			}
 		}
 		head.complete = true
 //		candidates.splice(candidates.indexOf(head), 1)
 		head = null
+
+		// exit on impossible case
+		if(candidates.length == 0 && neighbors.length == 0)
+		{
+			head = null
+			pd_event("dead");
+			init()
+			return;
+		}
 	}
 
 	drawStuff()
@@ -216,9 +377,10 @@ resizeCanvas();
 function drawStuff() {
       
 	ctx.fillStyle = "rgb(0,0,0)";
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	ctx.setTransform(1,0,0,1,0,0);
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+	ctx.setTransform(1,0,0,1,ofx,ofy);
 
-	var s = 2
 
 
 	ctx.fillStyle = "rgb(40,40,40)";
@@ -233,13 +395,6 @@ function drawStuff() {
 			ctx.fillStyle = "rgb("+l+","+l+","+l+")";
 			ctx.fillRect (j*cellSize + margin/2, i*cellSize + margin/2, cellSize-margin, cellSize-margin);
 
-			if(n == dst)
-			{
-				ctx.fillStyle = "rgb(255,0,0)";
-				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
-				ctx.fill()
-			}
 			if(n.path)
 			{
 				ctx.fillStyle = "rgb(255,127,0)";
@@ -247,16 +402,23 @@ function drawStuff() {
 				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
 				ctx.fill()
 			}
+			else if(n == dst)
+			{
+				ctx.fillStyle = "rgb(255,0,0)";
+				ctx.beginPath()
+				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.fill()
+			}
 			else if(n.complete)
 			{
-				ctx.fillStyle = "rgb(127,127,127)";
+				ctx.fillStyle = "rgb(0,120,200)";
 				ctx.beginPath()
 				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
 				ctx.fill()
 			}
 			else if(head && n.id == head.id)
 			{
-				ctx.fillStyle = "rgb(0,0,255)";
+				ctx.fillStyle = "rgb(255,255,0)";
 				ctx.beginPath()
 				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
 				ctx.fill()
@@ -273,7 +435,7 @@ function drawStuff() {
 			}
 			else if(n.head)
 			{
-				ctx.fillStyle = "rgb(0,255,255)";
+				ctx.fillStyle = "rgb(64,200,255)";
 				ctx.beginPath()
 				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
 				ctx.fill()
@@ -346,6 +508,22 @@ function drawStuff() {
 		ctx.stroke();
 	}
 
+	// XXX disable texts
+	if(false && subject && aiWords != "")
+	{
+
+		
+    	ctx.font="10px Verdana";
+    	
+    	measures = ctx.measureText(aiWords)
+
+    	ctx.fillStyle = "rgb(127,127,127)";
+    	console.log(measures)
+		ctx.fillRect (subject.x * cellSize, subject.y * cellSize, measures.width, 14);
+
+		ctx.fillStyle = "rgba(255, 127, 0, 0.8)";
+    	ctx.fillText(aiWords,subject.x * cellSize, subject.y * cellSize + 12);
+	}
 /*
 	ctx.fillStyle = "rgb(0,0,200)";
 	ctx.fillRect (100, 100, s, s);
