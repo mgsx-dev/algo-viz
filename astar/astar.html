@@ -1,69 +1,257 @@
 <html>
 
-<body style="background-color: 0; margin: 0; padding: 0">
+<!--
+Compatibility notes :
+* input type range : IE11+ (http://caniuse.com/#feat=input-range)
+-->
 
-<div style="position: fixed; top: 0; left: 0; opacity: 0.9; background-color: 0">
-	<input id="timeSlider" type="range" min="1" max="100">
-	<button onclick="bt()">ok</button>
+<head>
+	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-hQpvDQiCJaD2H465dQfA717v7lu5qHWtDbWNPvaTJ0ID5xnPUlVXnKzq7b8YUkbN" crossorigin="anonymous">
+	<script   src="https://code.jquery.com/jquery-2.2.3.min.js"   integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="   crossorigin="anonymous"></script>
+	<script src="webpd.js"></script>
+
+	<style>
+	.field{
+		vertical-align: top;
+	}
+	.field label{
+		vertical-align: top;
+		display:inline-block; 
+		width:220px;
+		padding-top: 4px;
+	}
+	.field input{
+		vertical-align: top;
+		display:inline-block;
+	}
+	#panelDetails{
+		padding: 15px;
+	}
+	#panelDetails div.field{
+		padding-top: 5px;
+		padding-bottom: 5px;
+		border-bottom: 1px solid #777;
+	}
+	</style>
+</head>
+
+<body style="background-color: 0; margin: 0; padding: 0; font-family: Verdana; font-size: 10px">
+
+<div style="position: fixed; top: 0; right: 0; opacity: 0.9; background-color: 0; color: #fff">
+	<div>
+		<button id="btShowHideDetails" class="fa fa-gears fa-4x" style="float: left;"></button>
+		<label id="panelTitle" style=" display: none; font-size: 4em; padding-left: 2em">I am A-STAR</label>
+	</div>
+	<div id="panelDetails" style="display: none; clear: left;">
+		<div class="field">
+			<i class="fa fa-clock-o fa-2x"></i>
+			<label>Want to change my brain speed ?</label>
+			<input id="timeSlider" type="range" min="1" max="50" value="10">
+		</div>
+		<div class="field">
+			<i class="fa fa-comment-o fa-2x"></i>
+			<label>Want to know what i'm thinking ?</label>
+			<input id="optAITalkings" type="checkbox">
+		</div>
+		<div class="field">
+			<i class="fa fa-commenting-o fa-2x"></i>
+			<label>Want to know what i'm really thinking ?</label>
+			<input id="optAIFunnyTalkings" type="checkbox">
+		</div>
+		<div class="field">
+			<i class="fa fa-th fa-2x"></i>
+			<label>Want to change my environement ?</label>
+			<input id="sizeSlider" type="range" min="4" max="100" value="30">
+		</div>
+		<div class="field">
+			<i class="fa fa-hand-stop-o fa-2x"></i>
+			<label>Want to take over ?</label>
+			<button id="btNextStep" class="fa fa-step-forward fa-2x"></button>
+			<button id="btPlay" class="fa fa-play-circle fa-2x"></button>
+			<button id="btNext" class="fa fa-fast-forward fa-2x"></button>
+		</div>
+		<div class="field">
+			<i class="fa fa-map-o fa-2x"></i>
+			<label>I lost you ?</label>
+			<button id="btResetTransform" class="fa fa-arrows-alt fa-2x"></button>
+		</div>
+		<div class="field">
+			<i class="fa fa-music fa-2x"></i>
+			<label>Want to hear me ?</label>
+			<input id="optSound" type="checkbox" checked>
+		</div>
+		<div class="field">
+			<i class="fa fa-eye fa-2x"></i>
+			<label>Want me to show more ?</label>
+			<input id="optPathPersistence" type="checkbox">
+			<i class="fa fa-road fa-2x"></i>
+		</div>
+		<div class="field">
+			<i class="fa fa-cloud fa-2x"></i>
+			<label>Want more ?</label>
+			Maybe one day ...
+		</div>
+		<div class="field">
+			<i class="fa fa-bug fa-2x"></i>
+			<label>Want to see under the hood ?</label>
+			You don't want that ...
+		</div>
+	</div>
 </div>
 
 <canvas id="canvas" width="100" height="100" draggable="false" onmousemove="canvasDrag(event)"></canvas>
-<script   src="https://code.jquery.com/jquery-2.2.3.min.js"   integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="   crossorigin="anonymous"></script>
-<script src="webpd.js"></script>
 <script>
 
-patchStr = "#N canvas 344 249 450 300 10;\n\
-#X obj 85 39 osc~ 440;\n\
-#X obj 210 131 line~;\n\
-#X obj 137 122 *~;\n\
-#X obj 120 220 dac~;\n\
-#X obj 310 14 r pop;\n\
-#X msg 320 156 0 30;\n\
-#X msg 238 64 1 1;\n\
-#X obj 163 178 *~ 0.5;\n\
-#X obj 299 115 delay 1;\n\
-#X connect 0 0 2 0;\n\
-#X connect 1 0 2 1;\n\
-#X connect 2 0 7 0;\n\
-#X connect 4 0 6 0;\n\
-#X connect 5 0 1 0;\n\
-#X connect 6 0 1 0;\n\
-#X connect 6 0 8 0;\n\
-#X connect 7 0 3 0;\n\
-#X connect 7 0 3 1;\n\
-#X connect 8 0 5 0;\n\
-"
+AIThoughts = [
+	"Do you really undertand why I'm doing this ? Cause I'm not.",
+	"I Know, it looks like a crossed-words map, but it's not.",
+	"Do you even look at what I'm sayin ?",
+	"I'm pretty confident on this one !",
+	"I'm a little tired doing this, but who cares ?",
+	"Are you an IA ? cause I'm wondering if I am too !",
+	"You know you can tweak me, right?",
+	"This is the A-STAR Algorithm, does it make me a star ?",
+	"Do you get I can say weired thing or not ?"
+]
+
 
 $.get('astar.pd', function(patchStr) {
   patch = Pd.loadPatch(patchStr)
   Pd.start()
 })
 
+$('#sizeSlider').on('change', function () {
+	cancelPathFinding()
+	gridHeight = this.value
+	gridWidth = Math.floor(window.innerWidth * gridHeight / window.innerHeight)
+	createGraph()
+    resizeCanvas()
+});
 
-function bt()
-{
+
+$('#btResetTransform').on('click', function () {
+    ofx = ofy = 0
+    resizeCanvas()
+    drawStuff()
+});
+
+$('#btShowHideDetails').on('click', function () {
+    $('#panelDetails').css('display', $('#panelDetails').css('display') == 'block' ? 'none' : 'block');
+    $('#panelTitle').css('display', $('#panelTitle').css('display') == 'block' ? 'none' : 'block');
+});
+
+var optPathPersistence = false
+
+$('#optPathPersistence').on('change', function () {
+    optPathPersistence = this.checked
+    drawStuff()
+});
+
+var optAITalkings = false
+
+$('#optAITalkings').on('change', function () {
+    optAITalkings = this.checked
+    drawStuff()
+});
+
+var optAIFunnyTalkings = false
+
+$('#optAIFunnyTalkings').on('change', function () {
+    optAIFunnyTalkings = this.checked
+    drawStuff()
+});
+
+$('#optSound').on('change', function () {
+    if(this.checked)
+    	Pd.start()
+    else
+    	Pd.stop()
+});
+
+var optAutoStepping = true
+
+$('#btNextStep').on('click', function () {
+	if(playing)
+	{
+		if(optAutoStepping)
+		{
+			optAutoStepping = false
+		}
+		else
+		{
+			startASTAR()
+		}
+	}
+	else
+	{
+		optAutoStepping = false
+		init()
+	}
+   
+});
+
+$('#btPlay').on('click', function () {
+    
+    if(playing && !optAutoStepping)
+    {
+    	optAutoStepping = true
+    	startASTAR()
+    }
+    else if(!playing)
+    {
+    	init()
+    }
+    
+});
+
+$('#btNext').on('click', function () {
+    // cancelPathFinding()
 	init()
-}
+});
+
+$(function() {
+	gridHeight = 30
+	gridWidth = Math.floor(window.innerWidth * gridHeight / window.innerHeight)
+
+	createGraph()
+	resizeCanvas();
+	if(AUTO_PLAY)
+	{
+		init()
+	}
+	
+});
 
 function pd_event(name){
 	
-	if(head){
-		console.log("pan:" + head.x / gridWidth)
+	if(head)
+	{
 		Pd.send("pan", [head.x / gridWidth])
 	}
 	else
 	{
 		Pd.send("pan", [0.5])
 	}
-	
-	Pd.send(name, [])
+	// Pd.send(name, [500 / timeSlider.value])
+	Pd.send(name, [500 / timeSlider.value])
 }
 
 function pd_free(freq, duration){
 	
 	Pd.send("pan", [0.5])
-	Pd.send("free", [duration, freq])
+	Pd.send("free", [duration / timeSlider.value, freq])
 }
+
+function soundFromDistance(node, freq_min, freq_max, duration)
+{
+	dx = src.x - dst.x
+	dy = src.y - dst.y
+	dstBase = Math.sqrt(dx*dx+dy*dy)
+	rate = node.h / dstBase
+	freq = freq_min + (freq_max - freq_min) * (1 - rate)
+	pd_free(freq , duration)
+}
+
 
 if (!String.format) {
   String.format = function(format) {
@@ -81,12 +269,17 @@ if (!String.format) {
 var canvas = document.getElementById("canvas")
 var ctx = canvas.getContext("2d");
 
+var AUTO_PLAY = true
+
+var funnyTalkingRate = 0.3
+
 var timeSlider = document.getElementById("timeSlider")
-console.log(timeSlider.value)
+
 var margin = 2
 var cellSize = 0
-var gridWidth = 12//28//58//70
-var gridHeight = 8//15//30//40
+var gridHeight = null
+var gridWidth = null
+
 var weight = 10 // 100000000
 var cstcoast = 0
 var aiWords = ""
@@ -105,22 +298,67 @@ var path_index = 0
 var subject = null
 var total_paths = 0
 
+var timer = null
+
 var graph = []
 
-for (var i=0 ; i<gridHeight ; i++)
+function cancelPathFinding()
 {
-	for(var j=0 ; j<gridWidth ; j++)
+
+	src = null
+	dst = null
+
+	heads = []
+	head = null
+	neighbors = []
+	neighbor = null
+	candidates = []
+	current = null
+	path = []
+	path_index = 0
+	subject = null
+	
+	for (var i=0 ; i<gridHeight ; i++)
 	{
-		id = i*gridWidth + j
-		zmin=0.2
-		zmax=0.5
-		z = Math.random()
-		if(z < zmin) z = 0
-		else if(z > zmax) z = 1
-		else z = (z-zmin+0.5)/(zmax-zmin+0.5)
-		graph.push({id: id, x: j, y: i, z: z, visited: false, head: false, complete: false, parent: null, path: false, path_amount: 0})
+		for(var j=0 ; j<gridWidth ; j++)
+		{
+			n = node(j,i)
+			n.parent = null
+			n.complete = false
+			n.visited = false
+			n.from = null
+			n.path = false
+			n.head = false
+		}
+	}
+	if(timer != null)
+    {
+    	window.clearTimeout(timer)
+    	timer = null
+    	playing = false
+    }	
+}
+
+
+function createGraph()
+{
+	graph = []
+	for (var i=0 ; i<gridHeight ; i++)
+	{
+		for(var j=0 ; j<gridWidth ; j++)
+		{
+			id = i*gridWidth + j
+			zmin=0.2
+			zmax=0.5
+			z = Math.random()
+			if(z < zmin) z = 0
+			else if(z > zmax) z = 1
+			else z = (z-zmin+0.5)/(zmax-zmin+0.5)
+			graph.push({id: id, x: j, y: i, z: z, visited: false, head: false, complete: false, parent: null, path: false, path_amount: 0})
+		}
 	}
 }
+
 
 canvas.addEventListener("mousewheel", mouseWheelHandler, false);
 
@@ -142,7 +380,6 @@ function zoom(ox, oy, rate)
 
 function mouseWheelHandler(e)
 {
-	console.log(e)
 	zoom(e.x, e.y, e.wheelDeltaY < 0 ? 0.5 : 2.0)
 	drawStuff();
 }
@@ -184,7 +421,6 @@ canvas.addEventListener('click', clickCanvas);
 function mouseDownCanvas(e) {
 	dragging = false
 	orig = {x: e.x, y:e.y}
-	console.log(orig)
 }
 canvas.addEventListener('mousedown', mouseDownCanvas);
 
@@ -198,8 +434,6 @@ function clickCanvas(e) {
 	}
 	y = Math.floor((e.y - ofy) / cellSize)
 	x = Math.floor((e.x - ofx) / cellSize)
-	console.log(y)
-	console.log(x)
 	id = y * gridWidth + x
 	// graph[id].z = 0
 	if (src == null) {
@@ -210,7 +444,14 @@ function clickCanvas(e) {
 		dst = node(x,y)
 		heads.push(src)
 		head = src
-		window.setTimeout(startASTAR, 1000)
+		timer = window.setTimeout(startASTAR, 1000)
+	}
+	else{
+		cancelPathFinding()
+		dst = node(x,y)
+		heads = [src]
+		head = src
+		timer = window.setTimeout(startASTAR, 1000)
 	}
 	drawStuff();
 	p = {x: e.x, y:e.y}
@@ -221,20 +462,17 @@ function node(x,y)
 	return graph[y*gridWidth+x]
 }
 
+var playing = false
+
 function init()
 {
+	cancelPathFinding()
 	possibles = []
 	for (var i=0 ; i<gridHeight ; i++)
 	{
 		for(var j=0 ; j<gridWidth ; j++)
 		{
 			n = node(j,i)
-			n.parent = null
-			n.complete = false
-			n.visited = false
-			n.from = null
-			n.path = false
-			n.head = false
 			if(n.z == 1)
 			{
 				possibles.push(n)
@@ -246,34 +484,22 @@ function init()
 	dst = possibles[Math.floor(Math.random() * possibles.length)]
 	heads.push(src)
 	head = src
-	window.setTimeout(startASTAR, 1000)
+	timer = window.setTimeout(startASTAR, 1000)
+	playing = true
 }
 
-function soundFromDistance(node, freq_min, freq_max, duration)
-{
-	dx = src.x - dst.x
-	dy = src.y - dst.y
-	dstBase = Math.sqrt(dx*dx+dy*dy)
-	rate = node.h / dstBase
-	freq = freq_min + (freq_max - freq_min) * (1 - rate)
-	pd_free(freq , duration)
-}
+
 
 
 function startASTAR()
 {
-	
 	subject = null
 	if (neighbors.length > 0)
 	{
-		// pd_event("adj");
-		
-
-		console.log("get next head")
 		neighbor = neighbors.pop()
 		if(!neighbor.visited) candidates.push(neighbor)
 		neighbor.head = true
-		console.log(neighbor)
+
 		if (neighbor.visited)
 		{
 			newcoast = neighbor.from.coast + cstcoast + Math.abs(neighbor.from.z - neighbor.z) * weight
@@ -282,6 +508,14 @@ function startASTAR()
 				neighbor.parent = neighbor.from
 				neighbor.coast = newcoast
 				neighbor.dist = neighbor.coast + neighbor.h
+
+				aiWords = String.format("This path seams better from here ... I reevaluate it")
+				subject = neighbor
+			}
+			else
+			{
+				aiWords = String.format("This path doesn't worth it ... I giveup")
+				subject = neighbor
 			}
 		}
 		else
@@ -295,14 +529,14 @@ function startASTAR()
 			neighbor.h = cstcoast * (Math.abs(dx) + Math.abs(dy)) + Math.sqrt(dx*dx+dy*dy); // Math.sqrt(dx*dx+dy*dy)
 			neighbor.dist = neighbor.coast + neighbor.h
 
-			aiWords = String.format("This one coast me {0} and is {1} far to target, so path to destination would coast me {2} ...", neighbor.coast, neighbor.h, neighbor.dist)
+			aiWords = String.format("This one coast me {0} and is {1} far to target.\nSo path to destination would coast me {2} ...", neighbor.coast.toFixed(2), neighbor.h.toFixed(2), neighbor.dist.toFixed(2))
 			subject = neighbor
 
 			neighbor.visited = true
 		}
 		neighbor.from = null
 
-		soundFromDistance(neighbor, 400, 2000, 300)
+		soundFromDistance(neighbor, 400, 2000, 500)
 	}
 	else if(head == null)
 	{
@@ -316,23 +550,30 @@ function startASTAR()
 				return a.dist - b.dist
 			})
 
-			console.log(candidates.map(function(e,i,t){return e.dist}))
-
-			console.log("find best one")
 			head = candidates.shift();
-			console.log(head.dist)
+			
 			if (head == dst)
 			{
 				head = null
 				candidates = []
 				current = dst
+
+				aiWords = String.format("Destination found ! ... Finally !")
 			}
+			else
+			{
+				aiWords = String.format("This one seams worth it, let try with it !")
+			}
+			subject = head
 
 		}
 		else if(current)
 		{
+			aiWords = String.format("Best path lead from here (I just follow direction actually)")
+			subject = current
+
 			current.path_amount += 1
-			soundFromDistance(current, 1840, 4240, 30)
+			soundFromDistance(current, 1840, 4240, 100)
 			// pd_event("path");
 			path.unshift(current)
 			current.path = true
@@ -342,7 +583,7 @@ function startASTAR()
 				drawStuff()
 				init()
 				return
-			} 
+			}
 		}
 		else
 		{
@@ -367,7 +608,7 @@ function startASTAR()
 	else
 	{
 		pd_event("check");
-		console.log("add neighboors")
+		
 		var adj
 		if(head.x>0 && !(adj=node(head.x-1,head.y)).complete)
 		{
@@ -399,40 +640,72 @@ function startASTAR()
 		}
 		head.complete = true
 //		candidates.splice(candidates.indexOf(head), 1)
-		head = null
+		
 
 		// exit on impossible case
 		if(candidates.length == 0 && neighbors.length == 0)
 		{
+			subject = head
+			aiWords = String.format("Ooops, I can't reach destination obviously !")
+
 			head = null
 			pd_event("dead");
 			init()
 			return;
 		}
+		else
+		{
+			subject = head
+			aiWords = String.format("Let explore neighborhood !")
+		}
+		head = null
+	}
+
+	if(optAIFunnyTalkings && Math.random() < funnyTalkingRate)
+	{
+		aiWords = AIThoughts[Math.floor(Math.random() * AIThoughts.length)]
 	}
 
 	drawStuff()
 
-
-	window.setTimeout(startASTAR, 1000.0 / timeSlider.value)
+	if(optAutoStepping)
+	{
+		timer = window.setTimeout(startASTAR, 1000.0 / timeSlider.value)
+	}
 }
 
 function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-
-        cellSize = Math.min(canvas.width / gridWidth, canvas.height / gridHeight)
-        /**
-         * Your drawings need to be inside this function otherwise they will be reset when 
-         * you resize the browser window and the canvas goes will be cleared.
-         */
-        drawStuff(); 
+    cellSize = Math.min(canvas.width / gridWidth, canvas.height / gridHeight)
+    /**
+     * Your drawings need to be inside this function otherwise they will be reset when 
+     * you resize the browser window and the canvas goes will be cleared.
+     */
+    drawStuff(); 
 }
-resizeCanvas();
+
+
+
+
 
 function drawStuff() {
-      
+     
+     if(src != null && dst != null)
+     {
+     	dx = src.x - dst.x
+		dy = src.y - dst.y
+		dstBase = Math.sqrt(dx*dx+dy*dy) 
+     }
+     else
+     {
+		dstBase = gridWidth + gridHeight
+     }
+	
+
+
+
 	ctx.fillStyle = "rgb(0,0,0)";
 	ctx.setTransform(1,0,0,1,0,0);
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -452,7 +725,7 @@ function drawStuff() {
 			
 			ctx.fillStyle = "rgb("+l+","+l+","+l+")";
 			ctx.fillRect (j*cellSize + margin/2, i*cellSize + margin/2, cellSize-margin, cellSize-margin);
-			if(n.path_amount > 0)
+			if(optPathPersistence && n.path_amount > 0)
 			{
 				pm = n.path_amount / (1 + total_paths)
 				ctx.fillStyle = "rgba(255,127,0," + pm + ")";
@@ -476,9 +749,10 @@ function drawStuff() {
 			}
 			else if(n.complete)
 			{
+				radius = 0.25
 				ctx.fillStyle = "rgb(0,120,200)";
 				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
 				ctx.fill()
 			}
 			else if(head && n.id == head.id)
@@ -491,18 +765,20 @@ function drawStuff() {
 			}
 			else if(neighbor && n.id == neighbor.id)
 			{
+				radius = 0.25
 				ctx.fillStyle = "rgb(255,255,0)";
 				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
 				ctx.fill()
 
 				
 			}
 			else if(n.head)
 			{
+				radius = 0.15
 				ctx.fillStyle = "rgb(64,200,255)";
 				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
 				ctx.fill()
 			}
 		}
@@ -546,7 +822,7 @@ function drawStuff() {
 				var from2 = {x: (n.x-dy+0.5-dx*lscale)*cellSize, y: (n.y-dx+0.5-dy*lscale)*cellSize}
 				var to    = {x: (n.parent.x+0.5+dx*lscale)*cellSize, y: (n.parent.y+0.5+dy*lscale)*cellSize}
 
-				ctx.fillStyle = "rgb(0,255,0)";
+				ctx.fillStyle = "rgb(50,250,190)";
 				
 				ctx.beginPath();
 				ctx.moveTo(to.x, to.y);
@@ -572,35 +848,39 @@ function drawStuff() {
 		ctx.lineTo(to.x, to.y);
 		ctx.stroke();
 	}
-
-	// XXX disable texts
-	if(false && subject && aiWords != "")
+	if(optAITalkings && subject && aiWords != "")
 	{
+		padding = 4
+		textHeight = 10
 
-		
     	ctx.font="10px Verdana";
     	
     	measures = ctx.measureText(aiWords)
 
-    	ctx.fillStyle = "rgb(127,127,127)";
-    	console.log(measures)
-		ctx.fillRect (subject.x * cellSize, subject.y * cellSize, measures.width, 14);
+		box = {
+			x: (subject.x + 1.5) * cellSize,
+			y: (subject.y - 0.5) * cellSize,
+			w: measures.width + 2 * padding,
+			h: textHeight + 2 * padding}
 
-		ctx.fillStyle = "rgba(255, 127, 0, 0.8)";
-    	ctx.fillText(aiWords,subject.x * cellSize, subject.y * cellSize + 12);
+
+    	ctx.strokeStyle = "rgb(0,0,0)";
+		ctx.lineWidth = 3;
+    	ctx.fillStyle = "rgb(255,255,255)";
+
+		ctx.fillRect (box.x, box.y, box.w, box.h);
+		ctx.strokeRect (box.x, box.y, box.w, box.h);
+
+		ctx.beginPath();
+		ctx.moveTo((subject.x + 0.5) * cellSize, (subject.y + 0.5) * cellSize);
+		ctx.lineTo(box.x, box.y + box.h);
+		ctx.stroke();
+
+		ctx.fillStyle = "rgb(0,0,0)";
+    	ctx.fillText(aiWords,box.x + padding, box.y + padding + textHeight);
 	}
-/*
-	ctx.fillStyle = "rgb(0,0,200)";
-	ctx.fillRect (100, 100, s, s);
 
-	ctx.fillStyle = "rgba(255, 127, 0, 0.8)";
-    ctx.font="20px Verdana";
-    ctx.fillText("Score : " + "toto",500,50);
-    ctx.fillText("Frame : " + "tata",500,100);
-    */
 }
-
-
 </script>
 
 </body>
