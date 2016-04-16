@@ -49,13 +49,11 @@ function pd_event(name){
 	
 	if(head){
 		console.log("pan:" + head.x / gridWidth)
-		Pd.send("panl", [head.x / gridWidth])
-		Pd.send("panr", [1.0 - head.x / gridWidth])
+		Pd.send("pan", [head.x / gridWidth])
 	}
 	else
 	{
-		Pd.send("panl", [0])
-		Pd.send("panr", [0])
+		Pd.send("pan", [0.5])
 	}
 	
 	Pd.send(name, [])
