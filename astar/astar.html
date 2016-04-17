@@ -104,14 +104,14 @@ Compatibility notes :
 
 AIThoughts = [
 	"Do you really undertand why I'm doing this ? Cause I'm not.",
-	"I Know, it looks like a crossed-words map, but it's not.",
+	"I Know, it looks like a cross-words map, but it's not.",
 	"Do you even look at what I'm sayin ?",
 	"I'm pretty confident on this one !",
 	"I'm a little tired doing this, but who cares ?",
-	"Are you an IA ? cause I'm wondering if I am too !",
+	"Are you an AI ? cause I'm wondering if I am too !",
 	"You know you can tweak me, right?",
 	"This is the A-STAR Algorithm, does it make me a star ?",
-	"Do you get I can say weired thing or not ?"
+	"Do you get I can say weird thing or not ?"
 ]
 
 
@@ -281,7 +281,7 @@ var gridHeight = null
 var gridWidth = null
 
 var weight = 10 // 100000000
-var cstcoast = 0
+var cstcost = 0
 var aiWords = ""
 
 var src = null
@@ -438,7 +438,7 @@ function clickCanvas(e) {
 	// graph[id].z = 0
 	if (src == null) {
 		src = node(x,y)
-		src.coast = 0
+		src.cost = 0
 	}
 	else if (dst == null) { 
 		dst = node(x,y)
@@ -480,7 +480,7 @@ function init()
 		}
 	}
 	src = possibles[Math.floor(Math.random() * possibles.length)]
-	src.coast = 0
+	src.cost = 0
 	dst = possibles[Math.floor(Math.random() * possibles.length)]
 	heads.push(src)
 	head = src
@@ -502,12 +502,12 @@ function startASTAR()
 
 		if (neighbor.visited)
 		{
-			newcoast = neighbor.from.coast + cstcoast + Math.abs(neighbor.from.z - neighbor.z) * weight
-			if(newcoast < neighbor.coast)
+			newcost = neighbor.from.cost + cstcost + Math.abs(neighbor.from.z - neighbor.z) * weight
+			if(newcost < neighbor.cost)
 			{
 				neighbor.parent = neighbor.from
-				neighbor.coast = newcoast
-				neighbor.dist = neighbor.coast + neighbor.h
+				neighbor.cost = newcost
+				neighbor.dist = neighbor.cost + neighbor.h
 
 				aiWords = String.format("This path seams better from here ... I reevaluate it")
 				subject = neighbor
@@ -521,15 +521,15 @@ function startASTAR()
 		else
 		{
 			neighbor.parent = neighbor.from
-			neighbor.coast = neighbor.parent.coast + cstcoast + Math.abs(neighbor.parent.z - neighbor.z) * weight
+			neighbor.cost = neighbor.parent.cost + cstcost + Math.abs(neighbor.parent.z - neighbor.z) * weight
 
 			dx = neighbor.x - dst.x
 			dy = neighbor.y - dst.y
 			// neighbor.h = Math.abs(dx) + Math.abs(dy)
-			neighbor.h = cstcoast * (Math.abs(dx) + Math.abs(dy)) + Math.sqrt(dx*dx+dy*dy); // Math.sqrt(dx*dx+dy*dy)
-			neighbor.dist = neighbor.coast + neighbor.h
+			neighbor.h = cstcost * (Math.abs(dx) + Math.abs(dy)) + Math.sqrt(dx*dx+dy*dy); // Math.sqrt(dx*dx+dy*dy)
+			neighbor.dist = neighbor.cost + neighbor.h
 
-			aiWords = String.format("This one coast me {0} and is {1} far to target.\nSo path to destination would coast me {2} ...", neighbor.coast.toFixed(2), neighbor.h.toFixed(2), neighbor.dist.toFixed(2))
+			aiWords = String.format("This one cost me {0} and is {1} far to target.\nSo path to destination would cost me {2} ...", neighbor.cost.toFixed(2), neighbor.h.toFixed(2), neighbor.dist.toFixed(2))
 			subject = neighbor
 
 			neighbor.visited = true
