@@ -75,6 +75,10 @@ Compatibility notes :
 				<i class="fa fa-line-chart fa-2x"></i>
 				<input id="elevationRateSlider" type="range" min="0" max="100" value="40">
 			</div>
+			<div class="subfield">
+				<input id="optDiagLinks" type="checkbox">
+				<i class="fa fa-arrows-alt fa-2x"></i>
+			</div>
 		</div>
 		<div class="field">
 			<i class="fa fa-hand-stop-o fa-2x"></i>
@@ -147,14 +151,22 @@ $('#obstacleRateSlider').on('change', function () {
 	cancelPathFinding()
 	obstacleRate = this.value / 100
 	createGraph()
-    resizeCanvas()
+    drawStuff()
 });
 var elevationRate = 0.4
 $('#elevationRateSlider').on('change', function () {
 	cancelPathFinding()
 	elevationRate = this.value / 100
 	createGraph()
-    resizeCanvas()
+    drawStuff()
+});
+
+var optDiagLinks = false
+$('#optDiagLinks').on('change', function () {
+	cancelPathFinding()
+	optDiagLinks = this.checked
+	createGraph()
+    drawStuff()
 });
 
 $('#btResetTransform').on('click', function () {
@@ -511,7 +523,7 @@ function init()
 		for(var j=0 ; j<gridWidth ; j++)
 		{
 			n = node(j,i)
-			if(n.z == 1)
+			if(n.z != 0)
 			{
 				possibles.push(n)
 			}
@@ -528,6 +540,23 @@ function init()
 
 var evaluateDistance
 
+
+function computeCost(a, b)
+{
+	if(false)
+	{
+		// version Z = height
+		dx = a.x - b.x
+		dy = a.y - b.y
+		dz = (a.z - b.z) * weight
+		return Math.sqrt(dx*dx+dy*dy+dz*dz)
+	}
+	// version Z = difficulty !
+	dx = a.x - b.x
+	dy = a.y - b.y
+	factor = 1 + ((1 - a.z) + (1 - b.z)) * weight * 0.5
+	return Math.sqrt(dx*dx+dy*dy) * factor
+}
 
 function startASTAR()
 {
@@ -555,7 +584,7 @@ function startASTAR()
 			neighbor.head = true
 			if (neighbor.visited)
 			{
-				newcost = neighbor.from.cost + cstcost + Math.abs(neighbor.from.z - neighbor.z) * weight
+				newcost = neighbor.from.cost + computeCost(neighbor.from, neighbor)
 				if(newcost < neighbor.cost)
 				{
 					neighbor.parent = neighbor.from
@@ -576,15 +605,36 @@ function startASTAR()
 				evaluateDistance = true
 
 				neighbor.parent = neighbor.from
-				neighbor.cost = neighbor.parent.cost + cstcost + Math.abs(neighbor.parent.z - neighbor.z) * weight
+				neighbor.cost = neighbor.from.cost + computeCost(neighbor.from, neighbor)
 
 				dx = neighbor.x - dst.x
 				dy = neighbor.y - dst.y
-				// neighbor.h = Math.abs(dx) + Math.abs(dy)
-				neighbor.h = cstcost * (Math.abs(dx) + Math.abs(dy)) + Math.sqrt(dx*dx+dy*dy); // Math.sqrt(dx*dx+dy*dy)
+				
+				// Heuristic is distance by average coast which is 
+				averageCost = 1 // (1 + (1 + weight * elevationRate)) / 2
+
+				if(optDiagLinks)
+				{
+					ndiags = Math.min(Math.abs(dx), Math.abs(dy))
+					nstraight = Math.max(Math.abs(dx), Math.abs(dy)) - ndiags
+					distance = ndiags * Math.SQRT2 + nstraight
+					neighbor.h = distance // + Math.sqrt(dx*dx+dy*dy)
+					neighbor.h *= averageCost
+				}
+				else
+				{
+					distance = Math.abs(dx) + Math.abs(dy)
+					neighbor.h = distance // + Math.sqrt(dx*dx+dy*dy)
+					neighbor.h *= averageCost
+				}
+
+				
+				// neighbor.h = Math.abs(dx) + Math.abs(dy) // basic A-STAR
+				// neighbor.h = 0 // dijkstra
+
 				neighbor.dist = neighbor.cost + neighbor.h
 
-				aiWords = String.format("This one cost me {0} and is {1} far to target.\nSo path to destination would cost me {2} ...", neighbor.cost.toFixed(2), neighbor.h.toFixed(2), neighbor.dist.toFixed(2))
+				aiWords = String.format("This one cost me {0} and might cost me {1} to target.\nSo path to destination would cost me {2} ...", neighbor.cost.toFixed(2), neighbor.h.toFixed(2), neighbor.dist.toFixed(2))
 				subject = neighbor
 
 				neighbor.visited = true
@@ -664,15 +714,9 @@ function startASTAR()
 			adj.from = head
 			neighbors.push(adj)
 		}
-		if(head.y>0)
+		if(optDiagLinks && head.x>0 && head.y<gridHeight-1)
 		{
-			adj=node(head.x,head.y-1)
-			adj.from = head
-			neighbors.push(adj)
-		}
-		if(head.x<gridWidth-1)
-		{
-			adj=node(head.x+1,head.y)
+			adj=node(head.x-1,head.y+1)
 			adj.from = head
 			neighbors.push(adj)
 		}
@@ -682,6 +726,38 @@ function startASTAR()
 			adj.from = head
 			neighbors.push(adj)
 		}
+		if(optDiagLinks && head.x<gridWidth-1 && head.y<gridHeight-1)
+		{
+			adj=node(head.x+1,head.y+1)
+			adj.from = head
+			neighbors.push(adj)
+		}
+		if(head.x<gridWidth-1)
+		{
+			adj=node(head.x+1,head.y)
+			adj.from = head
+			neighbors.push(adj)
+		}
+		if(optDiagLinks && head.x<gridWidth-1 && head.y>0)
+		{
+			adj=node(head.x+1,head.y-1)
+			adj.from = head
+			neighbors.push(adj)
+		}
+		if(head.y>0)
+		{
+			adj=node(head.x,head.y-1)
+			adj.from = head
+			neighbors.push(adj)
+		}
+		if(optDiagLinks && head.x>0 && head.y>0)
+		{
+			adj=node(head.x-1,head.y-1)
+			adj.from = head
+			neighbors.push(adj)
+		}
+
+
 		head.complete = true
 
 		subject = head
@@ -886,21 +962,33 @@ function drawStuff() {
 			if(n.parent)
 			{
 				var scale = 0.1
-				var lscale = 3
-				var dx = (n.x - n.parent.x) * scale
-				var dy = (n.y - n.parent.y) * scale
+				var lscale = 0.3
+				var dx = (n.x - n.parent.x)
+				var dy = (n.y - n.parent.y)
 
-				var from1 = {x: (n.x+dy+0.5-dx*lscale)*cellSize, y: (n.y+dx+0.5-dy*lscale)*cellSize}
-				var from2 = {x: (n.x-dy+0.5-dx*lscale)*cellSize, y: (n.y-dx+0.5-dy*lscale)*cellSize}
-				var to    = {x: (n.parent.x+0.5+dx*lscale)*cellSize, y: (n.parent.y+0.5+dy*lscale)*cellSize}
+				angle = Math.atan2(dy, dx)
+				dist = Math.sqrt(dx*dx+dy*dy)
 
 				ctx.fillStyle = "rgb(50,250,190)";
-				
+
+				ctx.save();
+				ctx.translate((n.parent.x+0.5)*cellSize, (n.parent.y+0.5)*cellSize);
+				ctx.rotate(angle);
+				ctx.translate(cellSize*(dist-1)/2, 0)
+
 				ctx.beginPath();
-				ctx.moveTo(to.x, to.y);
-				ctx.lineTo(from1.x, from1.y);
-				ctx.lineTo(from2.x, from2.y);
+				ctx.moveTo(cellSize * lscale, 0);
+				ctx.lineTo(cellSize * (1 - lscale), cellSize * scale);
+				ctx.lineTo(cellSize * (1 - lscale), -cellSize * scale);
 				ctx.fill();
+
+				ctx.restore();
+
+				
+
+
+				
+				
 			}
 		}
 	}
@@ -946,7 +1034,7 @@ function drawStuff() {
 			ctx.rotate(angle);
 			
 			ctx.textAlign = "center";
-			ctx.fillText(String.format("{0}m", neighbor.h.toFixed(2)), l/2, -5);
+			ctx.fillText(String.format("{0}", neighbor.h.toFixed(2)), l/2, -5);
 			ctx.restore();
 		}
 	}
