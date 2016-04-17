@@ -76,6 +76,10 @@ Compatibility notes :
 				<input id="elevationRateSlider" type="range" min="0" max="100" value="40">
 			</div>
 			<div class="subfield">
+				<i class="fa fa-bar-chart fa-2x"></i>
+				<input id="elevationWeightSlider" type="range" min="1" max="100" value="10">
+			</div>
+			<div class="subfield">
 				<input id="optDiagLinks" type="checkbox">
 				<i class="fa fa-arrows-alt fa-2x"></i>
 			</div>
@@ -105,8 +109,10 @@ Compatibility notes :
 		</div>
 		<div class="field">
 			<i class="fa fa-cloud fa-2x"></i>
-			<label>Want more ?</label>
-			Maybe one day ...
+			<label>Want to influence my optimism ?</label>
+			<i class="fa fa-minus-circle fa-2x"></i>
+			<input id="optimisticSlider" type="range" min="0" max="100" value="50">
+			<i class="fa fa-plus-circle fa-2x"></i>
 		</div>
 		<div class="field">
 			<i class="fa fa-bug fa-2x"></i>
@@ -161,6 +167,10 @@ $('#elevationRateSlider').on('change', function () {
     drawStuff()
 });
 
+$('#elevationWeightSlider').on('change', function () {
+	weight = this.value
+});
+
 var optDiagLinks = false
 $('#optDiagLinks').on('change', function () {
 	cancelPathFinding()
@@ -213,6 +223,11 @@ $('#optSound').on('change', function () {
     	Pd.start()
     else
     	Pd.stop()
+});
+
+var optimistic = 0.5
+$('#optimisticSlider').on('change', function () {
+	optimistic = this.value / 100
 });
 
 var optAutoStepping = true
@@ -294,7 +309,10 @@ function soundFromDistance(node, freq_min, freq_max, duration)
 	dx = src.x - dst.x
 	dy = src.y - dst.y
 	dstBase = Math.sqrt(dx*dx+dy*dy)
-	rate = node.h / dstBase
+	dx = node.x - dst.x
+	dy = node.y - dst.y
+	dstNode = Math.sqrt(dx*dx+dy*dy)
+	rate = dstNode / dstBase
 	freq = freq_min + (freq_max - freq_min) * (1 - rate)
 	pd_free(freq , duration)
 }
@@ -451,7 +469,7 @@ function canvasDrag(e)
 		case 3:
 			// right click
 			dif = p.y - e.y
-			zoom(orig.x, orig.y, dif<0 ? 1.01 : 0.99)
+			zoom(orig.x, orig.y, dif<0 ? 1.02 : 0.98)
 		}
 		drawStuff();
 	}
@@ -611,22 +629,26 @@ function startASTAR()
 				dy = neighbor.y - dst.y
 				
 				// Heuristic is distance by average coast which is 
-				averageCost = 1 // (1 + (1 + weight * elevationRate)) / 2
+				costMin = 1
+				costAve = 1 * (1 - elevationRate) + (1 + weight * 0.5) * elevationRate
+				
+				estimCost = costAve * optimistic + costMin * (1 - optimistic)
 
 				if(optDiagLinks)
 				{
 					ndiags = Math.min(Math.abs(dx), Math.abs(dy))
 					nstraight = Math.max(Math.abs(dx), Math.abs(dy)) - ndiags
 					distance = ndiags * Math.SQRT2 + nstraight
-					neighbor.h = distance // + Math.sqrt(dx*dx+dy*dy)
-					neighbor.h *= averageCost
+					neighbor.h = distance
+					neighbor.h *= estimCost
 				}
 				else
 				{
 					distance = Math.abs(dx) + Math.abs(dy)
-					neighbor.h = distance // + Math.sqrt(dx*dx+dy*dy)
-					neighbor.h *= averageCost
+					neighbor.h = distance
+					neighbor.h *= estimCost
 				}
+				neighbor.h += Math.sqrt(dx*dx+dy*dy) / Math.sqrt(gridWidth*gridWidth+gridHeight*gridHeight)
 
 				
 				// neighbor.h = Math.abs(dx) + Math.abs(dy) // basic A-STAR
@@ -831,8 +853,9 @@ function drawStuff() {
 			n = node(j,i)
 			id = i*gridWidth + j
 			l = Math.floor(n.z * 256)
+			r = n.z == 1 ? l : 0
 			
-			ctx.fillStyle = "rgb("+l+","+l+","+l+")";
+			ctx.fillStyle = "rgb("+r+","+l+","+r+")";
 			ctx.fillRect (j*cellSize + margin/2, i*cellSize + margin/2, cellSize-margin, cellSize-margin);
 			if(optPathPersistence && n.path_amount > 0)
 			{
