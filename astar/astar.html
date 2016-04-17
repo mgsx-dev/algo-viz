@@ -583,6 +583,7 @@ function startASTAR()
 	subject = null
 	if (neighbors.length > 0)
 	{
+		head = null
 		neighbor = neighbors.pop()
 
 		if(neighbor.z == 0)
@@ -786,7 +787,7 @@ function startASTAR()
 		subject = head
 		aiWords = String.format("Let explore neighborhood !")
 
-		head = null
+		// head = null
 	}
 
 	if(optAIFunnyTalkings && Math.random() < funnyTalkingRate)
@@ -899,24 +900,6 @@ function drawStuff() {
 				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
 				ctx.fill()
 			}
-			else if(head && n.id == head.id)
-			{
-				ctx.fillStyle = "rgb(255,255,0)";
-				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
-				ctx.fill()
-
-			}
-			else if(neighbor && n.id == neighbor.id)
-			{
-				radius = 0.25
-				ctx.fillStyle = "rgb(255,255,0)";
-				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
-				ctx.fill()
-
-				
-			}
 			else if(n.complete)
 			{
 				radius = 0.25
@@ -934,16 +917,13 @@ function drawStuff() {
 				ctx.fill()
 			}
 
+
 			if(optShowDistance)
 			{
 				var text = null
 				var size = 0
 				var color = "white"
-				if(n == neighbor || n == head)
-				{
-					// disable drawing here
-				}			
-				else if(n.complete)
+				if(n.complete)
 				{
 					size = 0.20
 					text = "" + n.cost.toFixed(2)
@@ -1035,10 +1015,43 @@ function drawStuff() {
 			}
 		}
 	}
+
+
+	if(neighbor != null)
+	{
+		radius = 0.35
+		ctx.strokeStyle = "rgb(255,255,0)";
+		ctx.lineWidth = 5;
+		ctx.beginPath()
+		ctx.arc((neighbor.x+0.5)*cellSize, (neighbor.y+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
+		ctx.stroke()
+	}
+	if(head != null)
+	{
+		radius = 0.35
+		ctx.strokeStyle = "rgb(255,128,0)";
+		ctx.lineWidth = 5;
+		ctx.beginPath()
+		ctx.arc((head.x+0.5)*cellSize, (head.y+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
+		ctx.stroke()
+	}
+
+
 	if(neighbor && evaluateDistance)
 	{
 		var from = {x: (neighbor.x+0.5)*cellSize, y: (neighbor.y+0.5)*cellSize}
 		var to   = {x: (dst.x+0.5)*cellSize,      y: (dst.y+0.5)*cellSize}
+
+		// add offset to not overlap text
+		dx = to.x - from.x
+		dy = to.y - from.y
+		l = Math.sqrt(dx*dx+dy*dy)
+		if(l>0)
+		{
+			from.x += cellSize * 0.35 * dx/l
+			from.y += cellSize * 0.35 * dy/l
+		}
+
 		var grad= ctx.createLinearGradient(from.x, from.y, to.x, to.y);
 		grad.addColorStop(0, "yellow");
 		grad.addColorStop(1, "red");
@@ -1110,8 +1123,9 @@ function drawStuff() {
 		ctx.fillRect (box.x, box.y, box.w, box.h);
 		ctx.strokeRect (box.x, box.y, box.w, box.h);
 
+		offset = 0.5 * 0.35 * Math.SQRT2
 		ctx.beginPath();
-		ctx.moveTo((subject.x + 0.5) * cellSize, (subject.y + 0.5) * cellSize);
+		ctx.moveTo((subject.x + 0.5 + offset) * cellSize, (subject.y + 0.5 - offset) * cellSize); // offset a little
 		ctx.lineTo(box.x, box.y + box.h);
 		ctx.stroke();
 
