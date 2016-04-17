@@ -68,16 +68,16 @@ Compatibility notes :
 			<i class="fa fa-arrows-v fa-2x"></i>
 			<input id="sizeSlider" type="range" min="4" max="100" value="30">
 			<div class="subfield">
-				<i class="fa fa-area-chart fa-2x"></i>
+				<i class="fa fa-minus-circle fa-2x"></i>
 				<input id="obstacleRateSlider" type="range" min="0" max="100" value="20">
 			</div>
 			<div class="subfield">
-				<i class="fa fa-line-chart fa-2x"></i>
-				<input id="elevationRateSlider" type="range" min="0" max="100" value="40">
+				<i class="fa fa-tree fa-2x"></i>
+				<input id="elevationRateSlider" type="range" min="0" max="100" value="50">
 			</div>
 			<div class="subfield">
-				<i class="fa fa-bar-chart fa-2x"></i>
-				<input id="elevationWeightSlider" type="range" min="1" max="100" value="10">
+				<i class="fa fa-line-chart fa-2x"></i>
+				<input id="elevationWeightSlider" type="range" min="1" max="100" value="50">
 			</div>
 			<div class="subfield">
 				<input id="optDiagLinks" type="checkbox">
@@ -159,7 +159,7 @@ $('#obstacleRateSlider').on('change', function () {
 	createGraph()
     drawStuff()
 });
-var elevationRate = 0.4
+var elevationRate = 0.5
 $('#elevationRateSlider').on('change', function () {
 	cancelPathFinding()
 	elevationRate = this.value / 100
@@ -169,6 +169,7 @@ $('#elevationRateSlider').on('change', function () {
 
 $('#elevationWeightSlider').on('change', function () {
 	weight = this.value
+	drawStuff()
 });
 
 var optDiagLinks = false
@@ -345,7 +346,7 @@ var cellSize = 0
 var gridHeight = null
 var gridWidth = null
 
-var weight = 10 // 100000000
+var weight = 50 // 100000000
 var cstcost = 1
 var aiWords = ""
 var aiFunnyWords = null
@@ -852,10 +853,29 @@ function drawStuff() {
 		{
 			n = node(j,i)
 			id = i*gridWidth + j
-			l = Math.floor(n.z * 256)
-			r = n.z == 1 ? l : 0
 			
-			ctx.fillStyle = "rgb("+r+","+l+","+r+")";
+			if(n.z <= 0)
+			{
+				ctx.fillStyle = "rgb(0,0,0)";
+			}
+			else if(n.z >= 1)
+			{
+				ctx.fillStyle = "rgb(255,255,255)";
+			}
+			else
+			{
+				val = (1 - n.z) * weight / 100
+
+				g = 0.2 * val + (1 - val) * 1
+				r = 0.9 * (1 - val) * (1 - val)
+
+				base = Math.floor(255 * r)
+				full = Math.floor(255 * g)
+
+					
+				ctx.fillStyle = "rgb(" + base + ","+full+"," + base + ")";
+			}
+
 			ctx.fillRect (j*cellSize + margin/2, i*cellSize + margin/2, cellSize-margin, cellSize-margin);
 			if(optPathPersistence && n.path_amount > 0)
 			{
