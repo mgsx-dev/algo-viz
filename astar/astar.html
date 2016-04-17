@@ -32,6 +32,9 @@ Compatibility notes :
 		padding-bottom: 5px;
 		border-bottom: 1px solid #777;
 	}
+	.subfield{
+		margin-left: 245px;
+	}
 	</style>
 </head>
 
@@ -46,6 +49,7 @@ Compatibility notes :
 		<div class="field">
 			<i class="fa fa-clock-o fa-2x"></i>
 			<label>Want to change my brain speed ?</label>
+			<i class="fa fa-tachometer fa-2x"></i>
 			<input id="timeSlider" type="range" min="1" max="50" value="10">
 		</div>
 		<div class="field">
@@ -59,9 +63,18 @@ Compatibility notes :
 			<input id="optAIFunnyTalkings" type="checkbox">
 		</div>
 		<div class="field">
-			<i class="fa fa-th fa-2x"></i>
+			<i class="fa fa-envira fa-2x"></i>
 			<label>Want to change my environement ?</label>
+			<i class="fa fa-arrows-v fa-2x"></i>
 			<input id="sizeSlider" type="range" min="4" max="100" value="30">
+			<div class="subfield">
+				<i class="fa fa-area-chart fa-2x"></i>
+				<input id="obstacleRateSlider" type="range" min="0" max="100" value="20">
+			</div>
+			<div class="subfield">
+				<i class="fa fa-line-chart fa-2x"></i>
+				<input id="elevationRateSlider" type="range" min="0" max="100" value="40">
+			</div>
 		</div>
 		<div class="field">
 			<i class="fa fa-hand-stop-o fa-2x"></i>
@@ -73,7 +86,7 @@ Compatibility notes :
 		<div class="field">
 			<i class="fa fa-map-o fa-2x"></i>
 			<label>I lost you ?</label>
-			<button id="btResetTransform" class="fa fa-arrows-alt fa-2x"></button>
+			<button id="btResetTransform" class="fa fa-expand fa-2x"></button>
 		</div>
 		<div class="field">
 			<i class="fa fa-music fa-2x"></i>
@@ -129,6 +142,20 @@ $('#sizeSlider').on('change', function () {
     resizeCanvas()
 });
 
+var obstacleRate = 0.2
+$('#obstacleRateSlider').on('change', function () {
+	cancelPathFinding()
+	obstacleRate = this.value / 100
+	createGraph()
+    resizeCanvas()
+});
+var elevationRate = 0.4
+$('#elevationRateSlider').on('change', function () {
+	cancelPathFinding()
+	elevationRate = this.value / 100
+	createGraph()
+    resizeCanvas()
+});
 
 $('#btResetTransform').on('click', function () {
     ofx = ofy = 0
@@ -351,14 +378,16 @@ function cancelPathFinding()
 
 function createGraph()
 {
+	zmin=obstacleRate
+	zmax=obstacleRate + (1 - obstacleRate) * elevationRate
+	console.log("zmin=" + zmin + ", zmax=" + zmax)
+
 	graph = []
 	for (var i=0 ; i<gridHeight ; i++)
 	{
 		for(var j=0 ; j<gridWidth ; j++)
 		{
 			id = i*gridWidth + j
-			zmin=0.2
-			zmax=0.5
 			z = Math.random()
 			if(z < zmin) z = 0
 			else if(z > zmax) z = 1
