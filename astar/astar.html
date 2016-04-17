@@ -666,7 +666,6 @@ function startASTAR()
 
 			soundFromDistance(neighbor, 400, 2000, 500)
 		}
-		neighbor.from = null
 
 	}
 	else if(head == null)
@@ -1024,6 +1023,13 @@ function drawStuff() {
 		ctx.lineWidth = 5;
 		ctx.beginPath()
 		ctx.arc((neighbor.x+0.5)*cellSize, (neighbor.y+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
+		ctx.stroke()
+
+		radius = 0.35
+		ctx.strokeStyle = "rgb(255,128,0)";
+		ctx.lineWidth = 5;
+		ctx.beginPath()
+		ctx.arc((neighbor.from.x+0.5)*cellSize, (neighbor.from.y+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
 		ctx.stroke()
 	}
 	if(head != null)
