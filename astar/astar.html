@@ -283,6 +283,7 @@ var gridWidth = null
 var weight = 10 // 100000000
 var cstcost = 0
 var aiWords = ""
+var aiFunnyWords = null
 
 var src = null
 var dst = null
@@ -663,7 +664,11 @@ function startASTAR()
 
 	if(optAIFunnyTalkings && Math.random() < funnyTalkingRate)
 	{
-		aiWords = AIThoughts[Math.floor(Math.random() * AIThoughts.length)]
+		aiFunnyWords = AIThoughts[Math.floor(Math.random() * AIThoughts.length)]
+	}
+	else
+	{
+		aiFunnyWords = null
 	}
 
 	drawStuff()
@@ -863,6 +868,12 @@ function drawStuff() {
 			w: measures.width + 2 * padding,
 			h: textHeight + 2 * padding}
 
+		if(aiFunnyWords != null)
+		{
+			measures = ctx.measureText(aiFunnyWords)
+			box.w = Math.max(box.w, measures.width + 2 * padding)
+			box.h += textHeight + padding
+		}
 
     	ctx.strokeStyle = "rgb(0,0,0)";
 		ctx.lineWidth = 3;
@@ -878,6 +889,13 @@ function drawStuff() {
 
 		ctx.fillStyle = "rgb(0,0,0)";
     	ctx.fillText(aiWords,box.x + padding, box.y + padding + textHeight);
+
+    	if(aiFunnyWords != null)
+		{
+			ctx.font="italic 10px Verdana";
+			ctx.fillStyle = "rgb(127,127,127)";
+    		ctx.fillText(aiFunnyWords, box.x + padding, box.y + 2 * (padding + textHeight));
+		}
 	}
 
 }
