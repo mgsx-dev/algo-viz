@@ -497,55 +497,74 @@ function init()
 	playing = true
 }
 
-
+var evaluateDistance
 
 
 function startASTAR()
 {
+	evaluateDistance = false
 	subject = null
 	if (neighbors.length > 0)
 	{
 		neighbor = neighbors.pop()
-		if(!neighbor.visited) candidates.push(neighbor)
-		neighbor.head = true
 
-		if (neighbor.visited)
+		if(neighbor.z == 0)
 		{
-			newcost = neighbor.from.cost + cstcost + Math.abs(neighbor.from.z - neighbor.z) * weight
-			if(newcost < neighbor.cost)
+			aiWords = String.format("I can't go there, it's an obstacle.")
+			subject = neighbor
+			pd_free(70, 500)
+		}
+		else if(neighbor.complete)
+		{
+			aiWords = String.format("I already know a good path to this one, It can't be better from here.")
+			subject = neighbor
+			// No sound here it's fine ! pd_free(70, 500)
+		}
+		else 
+		{
+			if(!neighbor.visited) candidates.push(neighbor)
+			neighbor.head = true
+			if (neighbor.visited)
 			{
-				neighbor.parent = neighbor.from
-				neighbor.cost = newcost
-				neighbor.dist = neighbor.cost + neighbor.h
+				newcost = neighbor.from.cost + cstcost + Math.abs(neighbor.from.z - neighbor.z) * weight
+				if(newcost < neighbor.cost)
+				{
+					neighbor.parent = neighbor.from
+					neighbor.cost = newcost
+					neighbor.dist = neighbor.cost + neighbor.h
 
-				aiWords = String.format("This path seams better from here ... I reevaluate it")
-				subject = neighbor
+					aiWords = String.format("This path seams better from here ... I reevaluate it")
+					subject = neighbor
+				}
+				else
+				{
+					aiWords = String.format("This path doesn't worth it ... I giveup")
+					subject = neighbor
+				}
 			}
 			else
 			{
-				aiWords = String.format("This path doesn't worth it ... I giveup")
+				evaluateDistance = true
+
+				neighbor.parent = neighbor.from
+				neighbor.cost = neighbor.parent.cost + cstcost + Math.abs(neighbor.parent.z - neighbor.z) * weight
+
+				dx = neighbor.x - dst.x
+				dy = neighbor.y - dst.y
+				// neighbor.h = Math.abs(dx) + Math.abs(dy)
+				neighbor.h = cstcost * (Math.abs(dx) + Math.abs(dy)) + Math.sqrt(dx*dx+dy*dy); // Math.sqrt(dx*dx+dy*dy)
+				neighbor.dist = neighbor.cost + neighbor.h
+
+				aiWords = String.format("This one cost me {0} and is {1} far to target.\nSo path to destination would cost me {2} ...", neighbor.cost.toFixed(2), neighbor.h.toFixed(2), neighbor.dist.toFixed(2))
 				subject = neighbor
+
+				neighbor.visited = true
 			}
-		}
-		else
-		{
-			neighbor.parent = neighbor.from
-			neighbor.cost = neighbor.parent.cost + cstcost + Math.abs(neighbor.parent.z - neighbor.z) * weight
 
-			dx = neighbor.x - dst.x
-			dy = neighbor.y - dst.y
-			// neighbor.h = Math.abs(dx) + Math.abs(dy)
-			neighbor.h = cstcost * (Math.abs(dx) + Math.abs(dy)) + Math.sqrt(dx*dx+dy*dy); // Math.sqrt(dx*dx+dy*dy)
-			neighbor.dist = neighbor.cost + neighbor.h
-
-			aiWords = String.format("This one cost me {0} and is {1} far to target.\nSo path to destination would cost me {2} ...", neighbor.cost.toFixed(2), neighbor.h.toFixed(2), neighbor.dist.toFixed(2))
-			subject = neighbor
-
-			neighbor.visited = true
+			soundFromDistance(neighbor, 400, 2000, 500)
 		}
 		neighbor.from = null
 
-		soundFromDistance(neighbor, 400, 2000, 500)
 	}
 	else if(head == null)
 	{
@@ -596,22 +615,13 @@ function startASTAR()
 		}
 		else
 		{
-			remove = false
-			if(remove)
-			{
-				for (var i=0 ; i<gridHeight ; i++)
-				{
-					for(var j=0 ; j<gridWidth ; j++)
-					{
-						n = node(j,i)
-						if(!n.path)
-						{
-							n.complete = n.head = false
-							n.parent = n.from = null
-						}
-					}
-				}
-			}
+			subject = head
+			aiWords = String.format("Ooops, I can't reach destination obviously !")
+
+			head = null
+			pd_event("dead");
+			init()
+			return;			
 		}
 	}
 	else
@@ -619,54 +629,35 @@ function startASTAR()
 		pd_event("check");
 		
 		var adj
-		if(head.x>0 && !(adj=node(head.x-1,head.y)).complete)
+		if(head.x>0)
 		{
-			if(adj.z > 0){
-				adj.from = head
-				neighbors.push(adj)
-			}
+			adj=node(head.x-1,head.y)
+			adj.from = head
+			neighbors.push(adj)
 		}
-		if(head.y>0 && !(adj=node(head.x,head.y-1)).complete)
+		if(head.y>0)
 		{
-			if(adj.z > 0){
-				adj.from = head
-				neighbors.push(adj)
-			}
+			adj=node(head.x,head.y-1)
+			adj.from = head
+			neighbors.push(adj)
 		}
-		if(head.x<gridWidth-1 && !(adj=node(head.x+1,head.y)).complete)
+		if(head.x<gridWidth-1)
 		{
-			if(adj.z > 0){
-				adj.from = head
-				neighbors.push(adj)
-			}
+			adj=node(head.x+1,head.y)
+			adj.from = head
+			neighbors.push(adj)
 		}
-		if(head.y<gridHeight-1 && !(adj=node(head.x,head.y+1)).complete)
+		if(head.y<gridHeight-1)
 		{
-			if(adj.z > 0){
-				adj.from = head
-				neighbors.push(adj)
-			}
+			adj=node(head.x,head.y+1)
+			adj.from = head
+			neighbors.push(adj)
 		}
 		head.complete = true
-//		candidates.splice(candidates.indexOf(head), 1)
-		
 
-		// exit on impossible case
-		if(candidates.length == 0 && neighbors.length == 0)
-		{
-			subject = head
-			aiWords = String.format("Ooops, I can't reach destination obviously !")
+		subject = head
+		aiWords = String.format("Let explore neighborhood !")
 
-			head = null
-			pd_event("dead");
-			init()
-			return;
-		}
-		else
-		{
-			subject = head
-			aiWords = String.format("Let explore neighborhood !")
-		}
 		head = null
 	}
 
@@ -760,14 +751,6 @@ function drawStuff() {
 				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
 				ctx.fill()
 			}
-			else if(n.complete)
-			{
-				radius = 0.25
-				ctx.fillStyle = "rgb(0,120,200)";
-				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
-				ctx.fill()
-			}
 			else if(head && n.id == head.id)
 			{
 				ctx.fillStyle = "rgb(255,255,0)";
@@ -785,6 +768,14 @@ function drawStuff() {
 				ctx.fill()
 
 				
+			}
+			else if(n.complete)
+			{
+				radius = 0.25
+				ctx.fillStyle = "rgb(0,120,200)";
+				ctx.beginPath()
+				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
+				ctx.fill()
 			}
 			else if(n.head)
 			{
@@ -884,7 +875,7 @@ function drawStuff() {
 			}
 		}
 	}
-	if(neighbor)
+	if(neighbor && evaluateDistance)
 	{
 		var from = {x: (neighbor.x+0.5)*cellSize, y: (neighbor.y+0.5)*cellSize}
 		var to   = {x: (dst.x+0.5)*cellSize,      y: (dst.y+0.5)*cellSize}
