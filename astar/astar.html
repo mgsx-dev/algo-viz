@@ -337,7 +337,8 @@ var ctx = canvas.getContext("2d");
 
 var AUTO_PLAY = true
 
-var funnyTalkingRate = 0.3
+var funnyTalkingRate = 0.5
+var funnyGlobalTalkingRate = 0.5
 
 var timeSlider = document.getElementById("timeSlider")
 
@@ -348,13 +349,12 @@ var gridWidth = null
 
 var weight = 50 // 100000000
 var cstcost = 1
-var aiWords = ""
+var aiWords = null
 var aiFunnyWords = null
 
 var src = null
 var dst = null
 
-var heads = []
 var head = null
 var neighbors = []
 var neighbor = null
@@ -375,7 +375,6 @@ function cancelPathFinding()
 	src = null
 	dst = null
 
-	heads = []
 	head = null
 	neighbors = []
 	neighbor = null
@@ -409,6 +408,8 @@ function cancelPathFinding()
 
 function createGraph()
 {
+	total_paths = 0
+
 	zmin=obstacleRate
 	zmax=obstacleRate + (1 - obstacleRate) * elevationRate
 	console.log("zmin=" + zmin + ", zmax=" + zmax)
@@ -511,14 +512,12 @@ function clickCanvas(e) {
 	}
 	else if (dst == null) { 
 		dst = node(x,y)
-		heads.push(src)
 		head = src
 		timer = window.setTimeout(startASTAR, 1000)
 	}
 	else{
 		cancelPathFinding()
 		dst = node(x,y)
-		heads = [src]
 		head = src
 		timer = window.setTimeout(startASTAR, 1000)
 	}
@@ -551,7 +550,6 @@ function init()
 	src = possibles[Math.floor(Math.random() * possibles.length)]
 	src.cost = 0
 	dst = possibles[Math.floor(Math.random() * possibles.length)]
-	heads.push(src)
 	head = src
 	timer = window.setTimeout(startASTAR, 1000)
 	playing = true
@@ -576,11 +574,135 @@ function computeCost(a, b)
 	factor = 1 + ((1 - a.z) + (1 - b.z)) * weight * 0.5
 	return Math.sqrt(dx*dx+dy*dy) * factor
 }
+contextualAIThoughts
+var contextualAIThoughts = {
+	obstacle: {
+		hint: function(node){
+			return ["I can't go there, it's an obstacle."]
+		},
+		funny: [
+			"Would you notice if I pass throw sometimes ?",
+			"Obstacles ... I definitely hate them !"
+	]},
+	complete: {
+		hint: function(node){
+			return ["I already know a good path to this one, It can't be better from here."]
+		},
+		funny: [
+			"Maybe I should check again ... did you changed my environnement ?",
+			"I know the good path, no doubt !"
+	]},
+	better: {
+		hint: function(node){
+			return ["This path seams better from here ... I reevaluate it"]
+		},
+		funny: [
+			"I wasn't wrong, it's just I didn't know there was a better one ...",
+			"Sometimes you have to change your mind, it can prevent to be stuck.",
+			"Old path to it is maybe the worse path ever !"
+		]
+	},
+	worse: {
+		hint: function(node){
+			return ["This path doesn't worth it. I know better path to it."]
+		},
+		funny: [
+			"Let's give it up this time ...",
+			"I know a lot of things as you can see !"
+		]
+	},
+	best: {
+		hint: function(node){
+			return ["This one might be on the best path, so let's continue with it."]
+		},
+		funny: [
+			"This decision is based on my optimism. It worth what it worth ...",
+			"Numbers speaks, there's no black magik here !"
+		]
+	},
+	evaluate: {
+		hint: function(node){
+			words = []
+			words.push(String.format("Cost from source to this one is {0}", node.cost.toFixed(2)))
+			if(node.z >= 1)
+				words.push("this one is clear, it won't cost me so much") // TODO diagonal !
+			else
+				words.push("this one is forest, it will cost me more") // TODO diagonal !
+			words.push(String.format("Cost to destination is evaluated to {0}", node.h.toFixed(2)))
+			words.push(String.format("So total cost from source to destination might be {0}", node.dist.toFixed(2)))
+			return words
+		},
+		funny: [
+			"This kind of computation give me artificial headake !",
+			"Double check numbers if you don't trust me.",
+			"If you understand that, good for you ! You don't need me anymore."
+		]
+	},
+	destination: {
+		hint: function(node){
+			return ["Destination found ! Let's go backward following the bread crumps."]
+		},
+		funny: [
+			"Then what the meaning of all this ? What's the goal ? What's my goal ... ?",
+			".... Finally !!",
+			"It reminds me Hop-o'-My-Thumb, you ?"
+		]
+	},
+	parent: {
+		hint: function(node){
+			return ["Best path lead from here"]
+		},
+		funny: [
+			"I hope it lead to the source ... if not there's something wrong in my algorithm.",
+			"Nothing clever here, I just follow the track actually"
+		]
+	},
+	parentSource : {
+		hint: function(node){
+			return ["Best path lead from here, which is the source, Won !"]
+		},
+		funny: [
+			"We did it ! I was pretty confident in my algorithm.",
+			"What I won ? To retry again and again right ?"
+		]
+	},
+	impossible: {
+		hint: function(node){
+			return ["Destination can't be reached"]
+		},
+		funny: [
+			"That happens sometimes, sorry.",
+			"Ooops",
+			"Damn obstacles !!"
+		]
+	},
+	explore: {
+		hint: function(node){
+			if(node == src)
+				return ["Let's start from here ! And see what's around, GO !"]
+			else
+				return [String.format("Path to this one cost {0}, let's explore neighborhood !", node.cost)]
+		},
+		funny: [
+			"I hope it's a good neighborhood though ...",
+			"I hope reach the destination soon ..."
+		]
+	}
+}
+
+var contextualAIThought = null
 
 function startASTAR()
 {
+	contextualAIThought = null
 	evaluateDistance = false
 	subject = null
+	if (head == dst)
+	{
+		head = null
+		candidates = []
+		current = dst
+	}
 	if (neighbors.length > 0)
 	{
 		head = null
@@ -588,13 +710,13 @@ function startASTAR()
 
 		if(neighbor.z == 0)
 		{
-			aiWords = String.format("I can't go there, it's an obstacle.")
+			contextualAIThought = contextualAIThoughts.obstacle
 			subject = neighbor
 			pd_free(70, 500)
 		}
 		else if(neighbor.complete)
 		{
-			aiWords = String.format("I already know a good path to this one, It can't be better from here.")
+			contextualAIThought = contextualAIThoughts.complete
 			subject = neighbor
 			// No sound here it's fine ! pd_free(70, 500)
 		}
@@ -611,12 +733,12 @@ function startASTAR()
 					neighbor.cost = newcost
 					neighbor.dist = neighbor.cost + neighbor.h
 
-					aiWords = String.format("This path seams better from here ... I reevaluate it")
+					contextualAIThought = contextualAIThoughts.better
 					subject = neighbor
 				}
 				else
 				{
-					aiWords = String.format("This path doesn't worth it ... I giveup")
+					contextualAIThought = contextualAIThoughts.worse
 					subject = neighbor
 				}
 			}
@@ -658,8 +780,8 @@ function startASTAR()
 
 				neighbor.dist = neighbor.cost + neighbor.h
 
-				aiWords = String.format("This one cost me {0} and might cost me {1} to target.\nSo path to destination would cost me {2} ...", neighbor.cost.toFixed(2), neighbor.h.toFixed(2), neighbor.dist.toFixed(2))
 				subject = neighbor
+				contextualAIThought = contextualAIThoughts.evaluate
 
 				neighbor.visited = true
 			}
@@ -684,41 +806,40 @@ function startASTAR()
 			
 			if (head == dst)
 			{
-				head = null
-				candidates = []
-				current = dst
-
-				aiWords = String.format("Destination found ! ... Finally !")
+				contextualAIThought = contextualAIThoughts.destination
 			}
 			else
 			{
-				aiWords = String.format("This one seams worth it, let try with it !")
+				contextualAIThought = contextualAIThoughts.best
 			}
 			subject = head
 
 		}
 		else if(current)
 		{
-			aiWords = String.format("Best path lead from here (I just follow direction actually)")
-			subject = current
-
 			current.path_amount += 1
 			soundFromDistance(current, 1840, 4240, 100)
 			// pd_event("path");
 			path.unshift(current)
 			current.path = true
 			current = current.parent
+
 			if(current == null){
 				total_paths += 1
 				drawStuff()
 				init()
 				return
 			}
+			if(current == src)
+				contextualAIThought = contextualAIThoughts.parentSource
+			else
+				contextualAIThought = contextualAIThoughts.parent
+			subject = current
 		}
 		else
 		{
 			subject = head
-			aiWords = String.format("Ooops, I can't reach destination obviously !")
+			contextualAIThought = contextualAIThoughts.impossible
 
 			head = null
 			pd_event("dead");
@@ -784,14 +905,27 @@ function startASTAR()
 		head.complete = true
 
 		subject = head
-		aiWords = String.format("Let explore neighborhood !")
-
-		// head = null
+		contextualAIThought = contextualAIThoughts.explore
 	}
-
+	if(contextualAIThought != null)
+	{
+		aiWords = contextualAIThought.hint(subject)
+	}
+	else
+	{
+		aiWords = null
+	}
+	
 	if(optAIFunnyTalkings && Math.random() < funnyTalkingRate)
 	{
-		aiFunnyWords = AIThoughts[Math.floor(Math.random() * AIThoughts.length)]
+		if(contextualAIThought != null && contextualAIThought.funny.length > 0)
+		{
+			aiFunnyWords = contextualAIThought.funny[Math.floor(Math.random() * contextualAIThought.funny.length)]
+		}
+		else if(Math.random() < funnyGlobalTalkingRate)
+		{
+			aiFunnyWords = AIThoughts[Math.floor(Math.random() * AIThoughts.length)]
+		}
 	}
 	else
 	{
@@ -977,10 +1111,6 @@ function drawStuff() {
 				ctx.stroke()
 			}
 
-			if(n.from)
-			{
-
-			}
 			if(n.parent)
 			{
 				var scale = 0.1
@@ -1100,20 +1230,26 @@ function drawStuff() {
 			ctx.restore();
 		}
 	}
-	if(optAITalkings && subject && aiWords != "")
+	if(optAITalkings && subject && aiWords != null)
 	{
 		padding = 4
 		textHeight = 10
 
     	ctx.font="10px Verdana";
-    	
-    	measures = ctx.measureText(aiWords)
 
 		box = {
 			x: (subject.x + 1.5) * cellSize,
 			y: (subject.y - 0.5) * cellSize,
-			w: measures.width + 2 * padding,
-			h: textHeight + 2 * padding}
+			w: 0,
+			h: padding}
+
+		for(var index in aiWords)
+		{
+			aiWord = aiWords[index]
+			measures = ctx.measureText(aiWord)
+			box.w = Math.max(box.w, measures.width + 2 * padding)
+			box.h += textHeight + padding
+		}
 
 		if(aiFunnyWords != null)
 		{
@@ -1136,13 +1272,20 @@ function drawStuff() {
 		ctx.stroke();
 
 		ctx.fillStyle = "rgb(0,0,0)";
-    	ctx.fillText(aiWords,box.x + padding, box.y + padding + textHeight);
+
+		var y = 1
+		for(var index in aiWords)
+		{
+			aiWord = aiWords[index]
+			ctx.fillText(aiWord, box.x + padding, box.y + (padding + textHeight) * y);
+			y += 1
+		}
 
     	if(aiFunnyWords != null)
 		{
 			ctx.font="italic 10px Verdana";
 			ctx.fillStyle = "rgb(127,127,127)";
-    		ctx.fillText(aiFunnyWords, box.x + padding, box.y + 2 * (padding + textHeight));
+    		ctx.fillText(aiFunnyWords, box.x + padding, box.y + (padding + textHeight) * y);
 		}
 	}
 
