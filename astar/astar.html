@@ -852,6 +852,33 @@ function drawStuff() {
 		ctx.moveTo(from.x, from.y);
 		ctx.lineTo(to.x, to.y);
 		ctx.stroke();
+
+		var left, right;
+		if(from.x < to.x)
+		{
+			left = from
+			right = to 
+		}
+		else
+		{
+			left = to 
+			right = from
+		}
+		dx = right.x-left.x
+		dy = right.y-left.y
+		angle = Math.atan2(dy, dx)
+		l = Math.sqrt(dx*dx+dy*dy)
+
+
+		ctx.save();
+		ctx.fillStyle = "orange" // ctx.createLinearGradient(0, 0, l, 0);
+		ctx.font="20px Verdana";
+		ctx.translate(left.x, left.y);
+		ctx.rotate(angle);
+		
+		ctx.textAlign = "center";
+		ctx.fillText(String.format("{0}m", neighbor.h.toFixed(2)), l/2, -5);
+		ctx.restore();
 	}
 	if(optAITalkings && subject && aiWords != "")
 	{
