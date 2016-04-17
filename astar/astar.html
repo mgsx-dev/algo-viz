@@ -94,7 +94,8 @@ Compatibility notes :
 		<div class="field">
 			<i class="fa fa-bug fa-2x"></i>
 			<label>Want to see under the hood ?</label>
-			You don't want that ...
+			<input id="optShowDistance" type="checkbox">
+			<i class="fa fa-calculator fa-2x"></i>
 		</div>
 	</div>
 </div>
@@ -144,6 +145,13 @@ var optPathPersistence = false
 
 $('#optPathPersistence').on('change', function () {
     optPathPersistence = this.checked
+    drawStuff()
+});
+
+var optShowDistance = false
+
+$('#optShowDistance').on('change', function () {
+    optShowDistance = this.checked
     drawStuff()
 });
 
@@ -786,6 +794,45 @@ function drawStuff() {
 				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
 				ctx.fill()
 			}
+
+			if(optShowDistance)
+			{
+				var text = null
+				var size = 0
+				var color = "white"
+				if(n == neighbor || n == head)
+				{
+					// disable drawing here
+				}			
+				else if(n.complete)
+				{
+					size = 0.20
+					text = "" + n.cost.toFixed(2)
+				}
+				else if(n.head)
+				{
+					size = 0.12
+					text = "" + n.dist.toFixed(2)
+				}
+
+				if(text != null)
+				{
+					measures = ctx.measureText(text)
+
+					scale = cellSize * size / measures.width
+
+					ctx.save();
+					ctx.fillStyle = color
+					ctx.font="20px Verdana";
+					ctx.translate((j+0.5)*cellSize, (i+0.5)*cellSize);
+					ctx.scale(scale, scale);
+					
+					ctx.textAlign = "center";
+					ctx.fillText(text, 0, 7);
+					ctx.restore();
+
+				}
+			}
 		}
 	}
 
@@ -853,32 +900,35 @@ function drawStuff() {
 		ctx.lineTo(to.x, to.y);
 		ctx.stroke();
 
-		var left, right;
-		if(from.x < to.x)
+		if(optShowDistance)
 		{
-			left = from
-			right = to 
-		}
-		else
-		{
-			left = to 
-			right = from
-		}
-		dx = right.x-left.x
-		dy = right.y-left.y
-		angle = Math.atan2(dy, dx)
-		l = Math.sqrt(dx*dx+dy*dy)
+			var left, right;
+			if(from.x < to.x)
+			{
+				left = from
+				right = to 
+			}
+			else
+			{
+				left = to 
+				right = from
+			}
+			dx = right.x-left.x
+			dy = right.y-left.y
+			angle = Math.atan2(dy, dx)
+			l = Math.sqrt(dx*dx+dy*dy)
 
 
-		ctx.save();
-		ctx.fillStyle = "orange" // ctx.createLinearGradient(0, 0, l, 0);
-		ctx.font="20px Verdana";
-		ctx.translate(left.x, left.y);
-		ctx.rotate(angle);
-		
-		ctx.textAlign = "center";
-		ctx.fillText(String.format("{0}m", neighbor.h.toFixed(2)), l/2, -5);
-		ctx.restore();
+			ctx.save();
+			ctx.fillStyle = "orange" // ctx.createLinearGradient(0, 0, l, 0);
+			ctx.font="20px Verdana";
+			ctx.translate(left.x, left.y);
+			ctx.rotate(angle);
+			
+			ctx.textAlign = "center";
+			ctx.fillText(String.format("{0}m", neighbor.h.toFixed(2)), l/2, -5);
+			ctx.restore();
+		}
 	}
 	if(optAITalkings && subject && aiWords != "")
 	{
