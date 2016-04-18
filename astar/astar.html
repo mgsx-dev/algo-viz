@@ -19,7 +19,16 @@ TODO :
 <head>
 	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-hQpvDQiCJaD2H465dQfA717v7lu5qHWtDbWNPvaTJ0ID5xnPUlVXnKzq7b8YUkbN" crossorigin="anonymous">
 	<script   src="https://code.jquery.com/jquery-2.2.3.min.js"   integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="   crossorigin="anonymous"></script>
+
 	<script src="../webpd.js"></script>
+	<script src="../utils.js"></script>
+	<script src="algo-player.js"></script>
+
+	<script src="astar-thoughts.js"></script>
+	<script src="astar-audio.js"></script>
+	<script src="astar-display.js"></script>
+	<script src="astar-core.js"></script>
+	<script src="astar-render.js"></script>
 
 	<style>
 	.field{
@@ -134,48 +143,45 @@ TODO :
 	</div>
 </div>
 
-<canvas id="canvas" width="100" height="100" draggable="false" onmousemove="canvasDrag(event)"></canvas>
+<canvas id="canvas" width="100" height="100" draggable="false"></canvas>
 <script>
 
-AIThoughts = [
-	"Do you really undertand why I'm doing this ? Cause I'm not.",
-	"I Know, it looks like a cross-words map, but it's not.",
-	"Do you even look at what I'm sayin ?",
-	"I'm pretty confident on this one !",
-	"I'm a little tired doing this, but who cares ?",
-	"Are you an AI ? cause I'm wondering if I am too !",
-	"You know you can tweak me, right?",
-	"This is the A-STAR Algorithm, does it make me a star ?",
-	"Do you get I can say weird thing or not ?"
-]
+var canvas = document.getElementById("canvas")
+var ctx = canvas.getContext("2d");
 
+function recreateGraph()
+{
+	createGraph()
+	AlgoPlayer.stop()
+	CanvasDisplay.resize()
+}
 
-$.get('astar.pd', function(patchStr) {
-  patch = Pd.loadPatch(patchStr)
-  Pd.start()
-})
+function updateGraph()
+{
+	createGraph()
+	AlgoPlayer.stop()
+    drawStuff()
+}
+
+$('#timeSlider').on('change', function () {
+	timeScale = this.value
+});
 
 $('#sizeSlider').on('change', function () {
-	cancelPathFinding()
 	gridHeight = this.value
 	gridWidth = Math.floor(window.innerWidth * gridHeight / window.innerHeight)
-	createGraph()
-    resizeCanvas()
+	recreateGraph()
 });
 
-var obstacleRate = 0.2
+
 $('#obstacleRateSlider').on('change', function () {
-	cancelPathFinding()
 	obstacleRate = this.value / 100
-	createGraph()
-    drawStuff()
+	updateGraph()
 });
-var elevationRate = 0.5
+
 $('#elevationRateSlider').on('change', function () {
-	cancelPathFinding()
 	elevationRate = this.value / 100
-	createGraph()
-    drawStuff()
+	updateGraph()
 });
 
 $('#elevationWeightSlider').on('change', function () {
@@ -183,18 +189,14 @@ $('#elevationWeightSlider').on('change', function () {
 	drawStuff()
 });
 
-var optDiagLinks = false
+
 $('#optDiagLinks').on('change', function () {
-	cancelPathFinding()
 	optDiagLinks = this.checked
-	createGraph()
-    drawStuff()
+	updateGraph()
 });
 
 $('#btResetTransform').on('click', function () {
-    ofx = ofy = 0
-    resizeCanvas()
-    drawStuff()
+    CanvasDisplay.reset()
 });
 
 $('#btShowHideDetails').on('click', function () {
@@ -202,28 +204,20 @@ $('#btShowHideDetails').on('click', function () {
     $('#panelTitle').css('display', $('#panelTitle').css('display') == 'block' ? 'none' : 'block');
 });
 
-var optPathPersistence = false
-
 $('#optPathPersistence').on('change', function () {
     optPathPersistence = this.checked
     drawStuff()
 });
-
-var optShowDistance = false
 
 $('#optShowDistance').on('change', function () {
     optShowDistance = this.checked
     drawStuff()
 });
 
-var optAITalkings = false
-
 $('#optAITalkings').on('change', function () {
     optAITalkings = this.checked
     drawStuff()
 });
-
-var optAIFunnyTalkings = false
 
 $('#optAIFunnyTalkings').on('change', function () {
     optAIFunnyTalkings = this.checked
@@ -231,154 +225,51 @@ $('#optAIFunnyTalkings').on('change', function () {
 });
 
 $('#optSound').on('change', function () {
-    if(this.checked)
-    	Pd.start()
-    else
-    	Pd.stop()
+    AStarAudio.enable(this.checked)
 });
 
-var optimistic = 0.5
 $('#optimisticSlider').on('change', function () {
 	optimistic = this.value / 100
 });
 
-var optAutoStepping = true
-
 $('#btNextStep').on('click', function () {
-	if(playing)
-	{
-		if(optAutoStepping)
-		{
-			optAutoStepping = false
-		}
-		else
-		{
-			startASTAR()
-		}
-	}
-	else
-	{
-		optAutoStepping = false
-		init()
-	}
-   
+	AlgoPlayer.pause()
+	AlgoPlayer.stepMode = true
+	AlgoPlayer.nextStep()
 });
 
 $('#btPlay').on('click', function () {
-    
-    if(playing && !optAutoStepping)
-    {
-    	optAutoStepping = true
-    	startASTAR()
-    }
-    else if(!playing)
-    {
-    	init()
-    }
-    
+	AlgoPlayer.stepMode = false
+	AlgoPlayer.start()   
 });
 
 $('#btNext').on('click', function () {
-    // cancelPathFinding()
-	init()
+	AlgoPlayer.stop()
+	AlgoPlayer.start()
 });
 
 $(function() {
 	gridHeight = 30
 	gridWidth = Math.floor(window.innerWidth * gridHeight / window.innerHeight)
 
-	createGraph()
-	resizeCanvas();
-	if(AUTO_PLAY)
-	{
-		init()
-	}
-	
+	recreateGraph()
+
+	AlgoPlayer.algo = AStarAlgo
+	AlgoPlayer.init()	
 });
 
-function pd_event(name){
-	
-	if(head)
-	{
-		Pd.send("pan", [head.x / gridWidth])
-	}
-	else
-	{
-		Pd.send("pan", [0.5])
-	}
-	// Pd.send(name, [500 / timeSlider.value])
-	Pd.send(name, [500 / timeSlider.value])
-}
 
-function pd_free(freq, duration){
-	
-	Pd.send("pan", [0.5])
-	Pd.send("free", [duration / timeSlider.value, freq])
-}
-
-function soundFromDistance(node, freq_min, freq_max, duration)
-{
-	dx = src.x - dst.x
-	dy = src.y - dst.y
-	dstBase = Math.sqrt(dx*dx+dy*dy)
-	dx = node.x - dst.x
-	dy = node.y - dst.y
-	dstNode = Math.sqrt(dx*dx+dy*dy)
-	rate = dstNode / dstBase
-	freq = freq_min + (freq_max - freq_min) * (1 - rate)
-	pd_free(freq , duration)
+var AStarAlgo = {
+	step: function(){ return startASTAR() },
+	reset: function(){ cancelPathFinding() },
+	init: function(){ init() },
+	draw: function(){ drawStuff() }
 }
 
 
-if (!String.format) {
-  String.format = function(format) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    return format.replace(/{(\d+)}/g, function(match, number) { 
-      return typeof args[number] != 'undefined'
-        ? args[number] 
-        : match
-      ;
-    });
-  };
-}
 
 
-var canvas = document.getElementById("canvas")
-var ctx = canvas.getContext("2d");
 
-var AUTO_PLAY = true
-
-var funnyTalkingRate = 0.5
-var funnyGlobalTalkingRate = 0.5
-
-var timeSlider = document.getElementById("timeSlider")
-
-var margin = 2
-var cellSize = 0
-var gridHeight = null
-var gridWidth = null
-
-var weight = 50 // 100000000
-var cstcost = 1
-var aiWords = null
-var aiFunnyWords = null
-
-var src = null
-var dst = null
-
-var head = null
-var neighbors = []
-var neighbor = null
-var candidates = []
-var current = null
-var path = []
-var path_index = 0
-var subject = null
-var total_paths = 0
-
-var timer = null
-
-var graph = []
 
 function cancelPathFinding()
 {
@@ -408,115 +299,14 @@ function cancelPathFinding()
 			n.head = false
 		}
 	}
-	if(timer != null)
-    {
-    	window.clearTimeout(timer)
-    	timer = null
-    	playing = false
-    }	
 }
 
 
-function createGraph()
-{
-	total_paths = 0
-
-	zmin=obstacleRate
-	zmax=obstacleRate + (1 - obstacleRate) * elevationRate
-	console.log("zmin=" + zmin + ", zmax=" + zmax)
-
-	graph = []
-	for (var i=0 ; i<gridHeight ; i++)
-	{
-		for(var j=0 ; j<gridWidth ; j++)
-		{
-			id = i*gridWidth + j
-			z = Math.random()
-			if(z < zmin) z = 0
-			else if(z > zmax) z = 1
-			else z = (z-zmin+0.5)/(zmax-zmin+0.5)
-			graph.push({id: id, x: j, y: i, z: z, visited: false, head: false, complete: false, parent: null, path: false, path_amount: 0})
-		}
-	}
-}
 
 
-canvas.addEventListener("mousewheel", mouseWheelHandler, false);
 
-var ofx=0
-var ofy=0
 
-var orig = null
-
-function zoom(ox, oy, rate)
-{
-	sx = (ox - ofx) / cellSize
-	sy = (oy - ofy) / cellSize
-	ofx += sx * cellSize
-	ofy += sy * cellSize
-	cellSize *= rate
-	ofx -= sx * cellSize
-	ofy -= sy * cellSize
-}
-
-function mouseWheelHandler(e)
-{
-	zoom(e.x, e.y, e.wheelDeltaY < 0 ? 0.5 : 2.0)
-	drawStuff();
-}
-
-function canvasDrag(e)
-{
-	if(e.which != 0)
-	{
-		dragging = true
-		switch(e.which)
-		{
-		case 1:
-			// left click
-			ofx+=e.x-p.x
-			ofy+=e.y-p.y
-			break;
-		case 2:
-			// middle click
-		case 3:
-			// right click
-			dif = p.y - e.y
-			zoom(orig.x, orig.y, dif<0 ? 1.02 : 0.98)
-		}
-		drawStuff();
-	}
-	p = {x: e.x, y:e.y}
-	
-}
-var p = {}
-
-document.addEventListener("contextmenu", function(e){
-    e.preventDefault();
-}, false);
-
-window.addEventListener('resize', resizeCanvas, false);
-
-canvas.addEventListener('click', clickCanvas);
-
-function mouseDownCanvas(e) {
-	dragging = false
-	orig = {x: e.x, y:e.y}
-}
-canvas.addEventListener('mousedown', mouseDownCanvas);
-
-var dragging = false;
-
-function clickCanvas(e) {
-	if(dragging)
-	{
-		dragging = false
-		return
-	}
-	y = Math.floor((e.y - ofy) / cellSize)
-	x = Math.floor((e.x - ofx) / cellSize)
-	id = y * gridWidth + x
-	// graph[id].z = 0
+function clickGraph(x,y) {
 	if (src == null) {
 		src = node(x,y)
 		src.cost = 0
@@ -524,28 +314,22 @@ function clickCanvas(e) {
 	else if (dst == null) { 
 		dst = node(x,y)
 		head = src
-		timer = window.setTimeout(startASTAR, 1000)
+		AlgoPlayer.start()
 	}
 	else{
-		cancelPathFinding()
+		AlgoPlayer.pause()
 		dst = node(x,y)
 		head = src
-		timer = window.setTimeout(startASTAR, 1000)
+		AlgoPlayer.start()
 	}
 	drawStuff();
-	p = {x: e.x, y:e.y}
 }
 
-function node(x,y)
-{
-	return graph[y*gridWidth+x]
-}
 
 var playing = false
 
 function init()
 {
-	cancelPathFinding()
 	possibles = []
 	for (var i=0 ; i<gridHeight ; i++)
 	{
@@ -562,146 +346,8 @@ function init()
 	src.cost = 0
 	dst = possibles[Math.floor(Math.random() * possibles.length)]
 	head = src
-	timer = window.setTimeout(startASTAR, 1000)
-	playing = true
 }
 
-var evaluateDistance
-
-
-function computeCost(a, b)
-{
-	if(false)
-	{
-		// version Z = height
-		dx = a.x - b.x
-		dy = a.y - b.y
-		dz = (a.z - b.z) * weight
-		return Math.sqrt(dx*dx+dy*dy+dz*dz)
-	}
-	// version Z = difficulty !
-	dx = a.x - b.x
-	dy = a.y - b.y
-	factor = 1 + ((1 - a.z) + (1 - b.z)) * weight * 0.5
-	return Math.sqrt(dx*dx+dy*dy) * factor
-}
-contextualAIThoughts
-var contextualAIThoughts = {
-	obstacle: {
-		hint: function(node){
-			return ["I can't go there, it's an obstacle."]
-		},
-		funny: [
-			"Would you notice if I pass throw sometimes ?",
-			"Obstacles ... I definitely hate them !"
-	]},
-	complete: {
-		hint: function(node){
-			return ["I already know a good path to this one, It can't be better from here."]
-		},
-		funny: [
-			"Maybe I should check again ... did you changed my environnement ?",
-			"I know the good path, no doubt !"
-	]},
-	better: {
-		hint: function(node){
-			return ["This path seams better from here ... I reevaluate it"]
-		},
-		funny: [
-			"I wasn't wrong, it's just I didn't know there was a better one ...",
-			"Sometimes you have to change your mind, it can prevent to be stuck.",
-			"Old path to it is maybe the worse path ever !"
-		]
-	},
-	worse: {
-		hint: function(node){
-			return ["This path doesn't worth it. I know better path to it."]
-		},
-		funny: [
-			"Let's give it up this time ...",
-			"I know a lot of things as you can see !"
-		]
-	},
-	best: {
-		hint: function(node){
-			return ["This one might be on the best path, so let's continue with it."]
-		},
-		funny: [
-			"This decision is based on my optimism. It worth what it worth ...",
-			"Numbers speaks, there's no black magik here !"
-		]
-	},
-	evaluate: {
-		hint: function(node){
-			words = []
-			words.push(String.format("Cost from source to this one is {0}", node.cost.toFixed(2)))
-			if(node.z >= 1)
-				words.push("this one is clear, it won't cost me so much") // TODO diagonal !
-			else
-				words.push("this one is forest, it will cost me more") // TODO diagonal !
-			words.push(String.format("Cost to destination is evaluated to {0}", node.h.toFixed(2)))
-			words.push(String.format("So total cost from source to destination might be {0}", node.dist.toFixed(2)))
-			return words
-		},
-		funny: [
-			"This kind of computation give me artificial headake !",
-			"Double check numbers if you don't trust me.",
-			"If you understand that, good for you ! You don't need me anymore."
-		]
-	},
-	destination: {
-		hint: function(node){
-			return ["Destination found ! Let's go backward following the bread crumps."]
-		},
-		funny: [
-			"Then what the meaning of all this ? What's the goal ? What's my goal ... ?",
-			".... Finally !!",
-			"It reminds me Hop-o'-My-Thumb, you ?"
-		]
-	},
-	parent: {
-		hint: function(node){
-			return ["Best path lead from here"]
-		},
-		funny: [
-			"I hope it lead to the source ... if not there's something wrong in my algorithm.",
-			"Nothing clever here, I just follow the track actually"
-		]
-	},
-	parentSource : {
-		hint: function(node){
-			return ["Best path lead from here, which is the source, Won !"]
-		},
-		funny: [
-			"We did it ! I was pretty confident in my algorithm.",
-			"What I won ? To retry again and again right ?"
-		]
-	},
-	impossible: {
-		hint: function(node){
-			return ["Destination can't be reached"]
-		},
-		funny: [
-			"That happens sometimes, sorry.",
-			"Ooops",
-			"Damn obstacles !!"
-		]
-	},
-	explore: {
-		hint: function(node){
-			if(node == src)
-				return ["Let's start from here ! And see what's around, GO !"]
-			else
-				return [String.format("Path to this one cost {0}, let's explore neighborhood !", node.cost)]
-		},
-		funny: [
-			"I hope it's a good neighborhood though ...",
-			"I hope reach the destination soon ..."
-		]
-	}
-}
-
-var contextualAIThought = null
 
 function startASTAR()
 {
@@ -837,9 +483,7 @@ function startASTAR()
 
 			if(current == null){
 				total_paths += 1
-				drawStuff()
-				init()
-				return
+				return false
 			}
 			if(current == src)
 				contextualAIThought = contextualAIThoughts.parentSource
@@ -854,8 +498,7 @@ function startASTAR()
 
 			head = null
 			pd_event("dead");
-			init()
-			return;			
+			return false			
 		}
 	}
 	else
@@ -943,364 +586,15 @@ function startASTAR()
 		aiFunnyWords = null
 	}
 
-	drawStuff()
-
-	if(optAutoStepping)
-	{
-		timer = window.setTimeout(startASTAR, 1000.0 / timeSlider.value)
-	}
-}
-
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    cellSize = Math.min(canvas.width / gridWidth, canvas.height / gridHeight)
-    /**
-     * Your drawings need to be inside this function otherwise they will be reset when 
-     * you resize the browser window and the canvas goes will be cleared.
-     */
-    drawStuff(); 
-}
-
-
-
-
-
-function drawStuff() {
-     
-     if(src != null && dst != null)
-     {
-     	dx = src.x - dst.x
-		dy = src.y - dst.y
-		dstBase = Math.sqrt(dx*dx+dy*dy) 
-     }
-     else
-     {
-		dstBase = gridWidth + gridHeight
-     }
-	
-
-
-
-	ctx.fillStyle = "rgb(0,0,0)";
-	ctx.setTransform(1,0,0,1,0,0);
-	ctx.fillRect(0, 0, canvas.width, canvas.height);
-	ctx.setTransform(1,0,0,1,ofx,ofy);
-
-
-
-	ctx.fillStyle = "rgb(40,40,40)";
-
-	for (var i=0 ; i<gridHeight ; i++)
-	{
-		for(var j=0 ; j<gridWidth ; j++)
-		{
-			n = node(j,i)
-			id = i*gridWidth + j
-			
-			if(n.z <= 0)
-			{
-				ctx.fillStyle = "rgb(0,0,0)";
-			}
-			else if(n.z >= 1)
-			{
-				ctx.fillStyle = "rgb(255,255,255)";
-			}
-			else
-			{
-				val = (1 - n.z) * weight / 100
-
-				g = 0.2 * val + (1 - val) * 1
-				r = 0.9 * (1 - val) * (1 - val)
-
-				base = Math.floor(255 * r)
-				full = Math.floor(255 * g)
-
-					
-				ctx.fillStyle = "rgb(" + base + ","+full+"," + base + ")";
-			}
-
-			ctx.fillRect (j*cellSize + margin/2, i*cellSize + margin/2, cellSize-margin, cellSize-margin);
-			if(optPathPersistence && n.path_amount > 0)
-			{
-				pm = n.path_amount / (1 + total_paths)
-				ctx.fillStyle = "rgba(255,127,0," + pm + ")";
-				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 3,0,2*Math.PI)
-				ctx.fill()
-			}
-			if(n.path)
-			{
-				ctx.fillStyle = "rgb(255,127,0)";
-				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
-				ctx.fill()
-			}
-			else if(n == dst)
-			{
-				ctx.fillStyle = "rgb(255,0,0)";
-				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
-				ctx.fill()
-			}
-			else if(n.complete)
-			{
-				radius = 0.25
-				ctx.fillStyle = "rgb(0,120,200)";
-				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
-				ctx.fill()
-			}
-			else if(n.head)
-			{
-				radius = 0.15
-				ctx.fillStyle = "rgb(64,200,255)";
-				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
-				ctx.fill()
-			}
-
-
-			if(optShowDistance)
-			{
-				var text = null
-				var size = 0
-				var color = "white"
-				if(n.complete)
-				{
-					size = 0.20
-					text = "" + n.cost.toFixed(2)
-				}
-				else if(n.head)
-				{
-					size = 0.12
-					text = "" + n.dist.toFixed(2)
-				}
-
-				if(text != null)
-				{
-					measures = ctx.measureText(text)
-
-					scale = cellSize * size / measures.width
-
-					ctx.save();
-					ctx.fillStyle = color
-					ctx.font="20px Verdana";
-					ctx.translate((j+0.5)*cellSize, (i+0.5)*cellSize);
-					ctx.scale(scale, scale);
-					
-					ctx.textAlign = "center";
-					ctx.fillText(text, 0, 7);
-					ctx.restore();
-
-				}
-			}
-		}
-	}
-
-	for (var i=0 ; i<gridHeight ; i++)
-	{
-		for(var j=0 ; j<gridWidth ; j++)
-		{
-			n = node(j,i)
-
-			if (n == src || n == dst)
-			{
-				ctx.strokeStyle = n == src ? "rgb(0,0,255)" : "rgb(255,0,0)";
-				ctx.lineWidth = 2;
-				ctx.beginPath()
-				ctx.arc((n.x+0.5)*cellSize, (n.y+0.5)*cellSize, cellSize / 3,0,2*Math.PI)
-				ctx.stroke()
-			}
-			if (n == current)
-			{
-				ctx.strokeStyle = "rgb(255,0,255)";
-				ctx.lineWidth = 2;
-				ctx.beginPath()
-				ctx.arc((n.x+0.5)*cellSize, (n.y+0.5)*cellSize, cellSize / 3,0,2*Math.PI)
-				ctx.stroke()
-			}
-
-			if(n.parent)
-			{
-				var scale = 0.1
-				var lscale = 0.3
-				var dx = (n.x - n.parent.x)
-				var dy = (n.y - n.parent.y)
-
-				angle = Math.atan2(dy, dx)
-				dist = Math.sqrt(dx*dx+dy*dy)
-
-				ctx.fillStyle = "rgb(50,250,190)";
-
-				ctx.save();
-				ctx.translate((n.parent.x+0.5)*cellSize, (n.parent.y+0.5)*cellSize);
-				ctx.rotate(angle);
-				ctx.translate(cellSize*(dist-1)/2, 0)
-
-				ctx.beginPath();
-				ctx.moveTo(cellSize * lscale, 0);
-				ctx.lineTo(cellSize * (1 - lscale), cellSize * scale);
-				ctx.lineTo(cellSize * (1 - lscale), -cellSize * scale);
-				ctx.fill();
-
-				ctx.restore();
-
-				
-
-
-				
-				
-			}
-		}
-	}
-
-
-	if(neighbor != null)
-	{
-		radius = 0.35
-		ctx.strokeStyle = "rgb(255,255,0)";
-		ctx.lineWidth = 5;
-		ctx.beginPath()
-		ctx.arc((neighbor.x+0.5)*cellSize, (neighbor.y+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
-		ctx.stroke()
-
-		radius = 0.35
-		ctx.strokeStyle = "rgb(255,128,0)";
-		ctx.lineWidth = 5;
-		ctx.beginPath()
-		ctx.arc((neighbor.from.x+0.5)*cellSize, (neighbor.from.y+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
-		ctx.stroke()
-	}
-	if(head != null)
-	{
-		radius = 0.35
-		ctx.strokeStyle = "rgb(255,128,0)";
-		ctx.lineWidth = 5;
-		ctx.beginPath()
-		ctx.arc((head.x+0.5)*cellSize, (head.y+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
-		ctx.stroke()
-	}
-
-
-	if(neighbor && evaluateDistance)
-	{
-		var from = {x: (neighbor.x+0.5)*cellSize, y: (neighbor.y+0.5)*cellSize}
-		var to   = {x: (dst.x+0.5)*cellSize,      y: (dst.y+0.5)*cellSize}
-
-		// add offset to not overlap text
-		dx = to.x - from.x
-		dy = to.y - from.y
-		l = Math.sqrt(dx*dx+dy*dy)
-		if(l>0)
-		{
-			from.x += cellSize * 0.35 * dx/l
-			from.y += cellSize * 0.35 * dy/l
-		}
-
-		var grad= ctx.createLinearGradient(from.x, from.y, to.x, to.y);
-		grad.addColorStop(0, "yellow");
-		grad.addColorStop(1, "red");
-
-		ctx.strokeStyle = grad;
-		ctx.lineWidth = 5;
-		
-		ctx.beginPath();
-		ctx.moveTo(from.x, from.y);
-		ctx.lineTo(to.x, to.y);
-		ctx.stroke();
-
-		if(optShowDistance)
-		{
-			var left, right;
-			if(from.x < to.x)
-			{
-				left = from
-				right = to 
-			}
-			else
-			{
-				left = to 
-				right = from
-			}
-			dx = right.x-left.x
-			dy = right.y-left.y
-			angle = Math.atan2(dy, dx)
-			l = Math.sqrt(dx*dx+dy*dy)
-
-
-			ctx.save();
-			ctx.fillStyle = "orange" // ctx.createLinearGradient(0, 0, l, 0);
-			ctx.font="20px Verdana";
-			ctx.translate(left.x, left.y);
-			ctx.rotate(angle);
-			
-			ctx.textAlign = "center";
-			ctx.fillText(String.format("{0}", neighbor.h.toFixed(2)), l/2, -5);
-			ctx.restore();
-		}
-	}
-	if(optAITalkings && subject && aiWords != null)
-	{
-		padding = 4
-		textHeight = 10
-
-    	ctx.font="10px Verdana";
-
-		box = {
-			x: (subject.x + 1.5) * cellSize,
-			y: (subject.y - 0.5) * cellSize,
-			w: 0,
-			h: padding}
-
-		for(var index in aiWords)
-		{
-			aiWord = aiWords[index]
-			measures = ctx.measureText(aiWord)
-			box.w = Math.max(box.w, measures.width + 2 * padding)
-			box.h += textHeight + padding
-		}
-
-		if(aiFunnyWords != null)
-		{
-			measures = ctx.measureText(aiFunnyWords)
-			box.w = Math.max(box.w, measures.width + 2 * padding)
-			box.h += textHeight + padding
-		}
-
-    	ctx.strokeStyle = "rgb(0,0,0)";
-		ctx.lineWidth = 3;
-    	ctx.fillStyle = "rgb(255,255,255)";
-
-		ctx.fillRect (box.x, box.y, box.w, box.h);
-		ctx.strokeRect (box.x, box.y, box.w, box.h);
-
-		offset = 0.5 * 0.35 * Math.SQRT2
-		ctx.beginPath();
-		ctx.moveTo((subject.x + 0.5 + offset) * cellSize, (subject.y + 0.5 - offset) * cellSize); // offset a little
-		ctx.lineTo(box.x, box.y + box.h);
-		ctx.stroke();
-
-		ctx.fillStyle = "rgb(0,0,0)";
-
-		var y = 1
-		for(var index in aiWords)
-		{
-			aiWord = aiWords[index]
-			ctx.fillText(aiWord, box.x + padding, box.y + (padding + textHeight) * y);
-			y += 1
-		}
-
-    	if(aiFunnyWords != null)
-		{
-			ctx.font="italic 10px Verdana";
-			ctx.fillStyle = "rgb(127,127,127)";
-    		ctx.fillText(aiFunnyWords, box.x + padding, box.y + (padding + textHeight) * y);
-		}
-	}
+	return true
 
 }
+
+
+
+
+
+
 </script>
 
 </body>
