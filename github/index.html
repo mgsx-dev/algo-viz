@@ -6,22 +6,84 @@
 
 	<script src="../webpd.js"></script>
 	<script src="../utils.js"></script>
+	<script src="../github.js"></script>
+
+	<style>
+	.field{
+		vertical-align: top;
+	}
+	.field label{
+		vertical-align: top;
+		display:inline-block; 
+		width:220px;
+		padding-top: 4px;
+	}
+	.field input{
+		vertical-align: top;
+		display:inline-block;
+	}
+	#panelDetails{
+		padding: 15px;
+	}
+	#panelDetails div.field{
+		padding-top: 5px;
+		padding-bottom: 5px;
+		border-bottom: 1px solid #777;
+	}
+	.subfield{
+		margin-left: 245px;
+	}
+	</style>
+</head>
 
 <body style="background-color: 0; margin: 0; padding: 0; font-family: Verdana; font-size: 10px">
 
-<canvas id="canvas" width="100" height="100" draggable="false"></canvas>
+<canvas id="canvas" width="1000" height="500" draggable="false"></canvas>
 
 <div style="position: fixed; top: 0; right: 0; opacity: 0.9; background-color: 0; color: #fff">
-	<input id="slider1" type="range" min="0" max="100" value="50">
-	<input id="x1" type="range" min="0" max="10" value="4">
-	<input id="x2" type="range" min="0" max="10" value="5">
+	<div class="field">
+		<i class="fa fa-github fa-2x"></i>
+		<i class="fa fa-user fa-2x"></i>
+		<input id="ghAccount" type="text" placeholder="enter a github account">
+		<br/>
+		<i class="fa fa-github fa-2x"></i>
+		<i class="fa fa-git-square fa-2x"></i>
+		<select id="optRepo" placeholder="select a repository"></select>
+	</div>
+	<div class="field">
+		<i class="fa fa-github fa-2x"></i>
+		<i class="fa fa-cloud-download fa-2x"></i>
+		<label>Github download (<span id="ghStats"></span>)</label>
+		<button id="playPauseButton" class="fa fa-pause-circle fa-2x">
+	</div>
+	<div class="field">
+		<i class="fa fa-github fa-2x"></i>
+		<i class="fa fa-lock fa-2x"></i>
+		<input id="ghUser" type="text" placeholder="github user name">
+		<input id="ghPass" type="password" placeholder="github password">
+		<button id="ghConnect" class="fa fa-sign-in fa-2x">
+	</div>
+	<div class="field">
+		<i class="fa fa-clock-o fa-2x"></i>
+		<label>Playback</label>
+		<input id="speedSlider" type="range" min="1" max="1000" value="250">
+	</div>
 </div>
 
 <script>
+var canvas = document.getElementById("canvas")
+var ctx = canvas.getContext("2d");
 
-// https://api.github.com/repos/mgsx-dev/algo-viz/commits
+var gh = new Github()
+gh.onStats(function()
+{
+	console.log("onstat")
+	$('#ghStats').text(downloadCount + " : " + gh.requestsRemaining + " / " + gh.requestsLimit)
+})
 
-commitsFlow = []
+var speed = 0.25
+
+var downloading = true
 
 $(function() {
 	$.get('patch.pd', function(patchStr) {
@@ -30,59 +92,234 @@ $(function() {
 	})
 });
 
-$(function() {
-	url = "https://api.github.com/repos/mgsx-dev/algo-viz/commits"
-	url = "https://api.github.com/repos/b2renger/PdDroidPublisher/commits"
+$('#ghConnect').on('click', function () {
+	gh.username = $('#ghUser')[0].value
+	gh.password = $('#ghPass')[0].value
+});
 
-	$.get(url, function(commits) {
-		console.log(commits[0])
-		console.log(commits.length)
-		for(var i in commits)
-		{
-			commit = commits[i]
-			// console.log(commit.sha)
-			// console.log(" - " + commit.author.login)
-			// console.log(" - " + commit.commit.author.name + " " + commit.commit.author.date)
-			// console.log(" - " + commit.commit.committer.name)
+$('#speedSlider').on('change', function () {
+	speed = this.value / 1000
+});
 
-			// console.log(commit.commit.author.date);
-			// console.log(new Date(commit.commit.author.date));
-			// console.log(JSON.parse(commit.commit.author.date))
+$('#playPauseButton').on('click', function () {
+	downloading = !downloading
+	$(this).removeClass('fa-play-circle')
+	$(this).removeClass('fa-pause-circle')
+	$(this).addClass(downloading ? 'fa-pause-circle' : 'fa-play-circle')
+	fetchCommits()
+});
 
-			commitsFlow.push({id: commit.author.id, author: commit.commit.author.name, date: new Date(commit.commit.author.date)})
-		}
-	  	start()
+$('#ghAccount').on('change', function () {
+	console.log(gh)
+	gh.searchUserRepositories(this.value, {}, function(data, meta){
+		var options = $("#optRepo");
+		options.empty()
+		options.append($("<option />").val('').text(''));
+		$.each(data.items, function() {
+		    options.append($("<option />").val(this.name).text(this.name));
+		});	
 	})
 });
+
+$('#optRepo').on('change', function () {
+	direction = {
+		next: "https://api.github.com/repos/" + $('#ghAccount')[0].value + "/" + $('#optRepo')[0].value + "/commits"
+	}
+	// TODO clear viz !
+	fetchCommits()
+});
+
+
+commitsBySHA = {}
+
+commitsFlow = []
+
+
+
+var direction = {
+}
+
+var downloadTimer = null
+
+function fetchCommits()
+{
+	window.clearTimeout(downloadTimer)
+	downloadTimer = null
+	if(downloading)
+	{
+		downloadCount += 1
+		gh.get(direction.next, receiveCommits)
+	}
+}
+
+var downloadCount = 0
+function receiveCommits(commits, meta)
+{
+	direction = meta
+
+	if(direction.next)
+	{
+		if(downloadTimer == null)
+		{
+			downloadTimer = window.setTimeout(fetchCommits, 1000)
+		}
+	}
+
+	for(var i in commits)
+	{
+		commit = commits[i]
+		c = {index: commitsFlow.length, sha: commit.sha, parents: commit.parents, id: commit.author.id, message: commit.commit.message, author: commit.commit.author.name, date: new Date(commit.commit.author.date)}
+		commitsFlow.push(c)
+		commitsBySHA[commit.sha] = c
+	}
+  	
+}
+
 
 
 
 var prev = null
-function start()
-{
-	var c = commitsFlow.pop()
-	if(c == null)
-	{
-		return
-	}
-	if(prev != null)
-	{
-		dif = c.date - prev.date
-		console.log(c.date)
-		console.log(prev.date)
-		console.log(dif) // ms
-		console.log(dif / 60000) // minutes
+var index = 0
 
-		window.setTimeout(start, dif / (60000 / 4))
-	}
-	else
+var mainloop = function() {
+    drawGame();
+};
+window.requestAnimationFrame( mainloop );
+
+var relTime = 0
+
+
+function drawGame()
+{
+	relTime += speed * 100
+
+	var ratio = 0.003
+
+	while(index < commitsFlow.length)
 	{
-		window.setTimeout(start, 0)
+		c = commitsFlow[index]
+		// console.log(-((c.date - commitsFlow[0].date) / 60000) - relTime)
+		if((-(c.date - commitsFlow[0].date) / 60000)  - relTime < 0)
+		{
+			console.log(index + " / " + commitsFlow.length)
+			Pd.send("commit", [c.id % 1000 + 1000])
+			index += 1
+		}
+		else
+		{
+			
+			break
+		}
+		
 	}
-	console.log(c.id) // ms
-	Pd.send("commit", [c.id % 1000 + 1000])
-	prev = c
-	
+
+	ctx.fillStyle = "rgb(0,0,0)";
+	ctx.setTransform(1,0,0,1,0,0);
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+	ctx.fillStyle = "orange";
+	ctx.strokeStyle = "red";
+	ctx.lineWidth = 1;
+
+	var h = canvas.height * 0.9
+	var w = canvas.width
+
+	ctx.beginPath()
+	ctx.moveTo(0, h);
+	ctx.lineTo(w, h);
+	ctx.stroke()
+
+	var commitsByLevel = [] // TODO arrange as tree !
+
+	for(var i in commitsFlow)
+	{
+
+		c = commitsFlow[commitsFlow.length-1 - i]
+
+		
+
+		colors = ["rgb(255,0,0)", "rgb(0,0,255)"]
+
+		ctx.strokeStyle = c.id == commitsFlow[0].id ? colors[0] : colors[1];
+		ctx.fillStyle = c.id == commitsFlow[0].id ? colors[0] : colors[1];
+
+		// console.log(c)
+		dif = -(c.date - commitsFlow[0].date) / 60000
+		time = dif // - relTime
+		if(time > 0)
+		{
+			x = time * ratio
+			ctx.beginPath()
+			ctx.moveTo(x, h);
+			ctx.lineTo(x, (c.message.length % h/2 + h/2));
+			ctx.stroke()
+
+			// TODO find row :
+			// if have parents then loop :
+			// if parent is last in row then ok
+			// else if last in next row before parent then ok for this one
+			// draw at max row
+			var rowMax = 0
+			var links = []
+			for(var p in c.parents)
+			{
+				var shaP = c.parents[p].sha
+				var cp = commitsBySHA[shaP]
+				var row = 0
+				while(row < commitsByLevel.length)
+				{
+					if(commitsByLevel[row][0].sha == shaP)
+						break
+					if(cp && commitsByLevel[row][0].date < cp.date)
+						break
+					row += 1
+				}
+				if(row < commitsByLevel.length)
+				{
+					commitsByLevel[row].unshift(c)
+				}
+				else
+				{
+					commitsByLevel.push([c])
+				}
+				if(row > rowMax) rowMax = row
+				if(cp) links.push({row: cp.row, date: cp.date, index: cp.index})
+				c.row = row
+			}
+
+			dia = 10
+			off = 2
+
+			for(var j in links)
+			{
+				var link = links[j]
+				var px = link.index * (dia + off) //-(link.date - commitsFlow[0].date) * ratio / 60000
+				ctx.beginPath()
+				ctx.moveTo(i * (dia + off), 10 + rowMax * (dia + off));
+				ctx.lineTo(px, 10 + rowMax * (dia + off));
+				ctx.lineTo(px, 10 + link.row * (dia + off));
+				ctx.stroke()
+
+			}
+			ctx.beginPath()
+			ctx.arc(i * (dia + off), 10 + rowMax * (dia + off), dia/2, 0, Math.PI * 2)
+			ctx.fill()
+
+
+		}
+
+
+
+	}
+			ctx.strokeStyle = "green";
+			x = relTime * ratio
+			ctx.beginPath()
+			ctx.moveTo(x, 0);
+			ctx.lineTo(x, h);
+			ctx.stroke()
+
+
+	window.requestAnimationFrame( mainloop );
 }
 
 </script>
