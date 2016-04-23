@@ -15,50 +15,60 @@ https://developer.github.com/v3/search/#search-code
 
 var Github = function(username, password){
 
+	var RateLimit = function(){
+		this.limit = null
+		this.remaining = null
+		this.reset = null
+		this.counter = 0
+		this.checkRequest = function(){
+			if(this.remaining != null && this.remaining == 0 && new Date(this.reset * 1000) > new Date()){
+				return false
+			}
+			this.counter++
+			return true
+		}
+		this.checkResponse = function(request){
+			this.limit = parseInt(request.getResponseHeader('X-RateLimit-Limit'))
+			this.remaining = parseInt(request.getResponseHeader('X-RateLimit-Remaining'))
+			this.reset = parseInt(request.getResponseHeader('X-RateLimit-Reset'))
+		}
+	}
+
 	this.username = username
 	this.password = password
-	this.searchRequestsLimit = null
-	this.searchRequestsRemaining = null
-	this.requestsLimit = null
-	this.requestsRemaining = null
+	this.searchRateLimit = new RateLimit()
+	this.rateLimit = new RateLimit()
 	this.onStatsCallback = null
-	this.requestCount = 0
 
 	this.onStats = function(callback){this.onStatsCallback = callback}
 
 	this.commits = function(user, repository, callback){
-		this.path("/repos/" + user + "/" + repository + "/commits", callback)
+		return this.path("/repos/" + user + "/" + repository + "/commits", callback)
 	}
 	this.searchUserRepositories = function(user, options, callback){
-		this.searchRepositories("user:" + user, options, callback)
+		return this.searchRepositories("user:" + user, options, callback)
 	}
 	this.searchRepositories = function(q, options, callback){
-		this.path("search/repositories?q=" + q, callback)
+		return this.path("search/repositories?q=" + q, callback)
 	}
 	this.path = function(path, callback){
-		this.get("https://api.github.com/" + path, callback)
+		return this.get("https://api.github.com/" + path, callback)
 	}
 	this.get = function(url, callback){
+		var isSearch = url.indexOf("https://api.github.com/search/") === 0
+		var rateLimit = isSearch ? this.searchRateLimit : this.rateLimit
+		if(!rateLimit.checkRequest()){
+			console.warn("Github API limit reached, retry later.")
+			return false
+		}
 		self = this
-		this.requestCount++
 		$.ajax({
 			url: url,
 			beforeSend: function (xhr){ 
 				if(self.username) xhr.setRequestHeader('Authorization', make_base_auth(self.username, self.password)); 
 		    }
 		}).done(function(data, status, request){
-			remaining = request.getResponseHeader('X-RateLimit-Remaining')
-			limit = request.getResponseHeader('X-RateLimit-Limit')
-			if(url.indexOf("https://api.github.com/search/") === 0)
-			{
-				self.searchRequestsLimit = limit
-				self.searchRequestsRemaining = remaining
-			}
-			else
-			{
-				self.requestsLimit = limit
-				self.requestsRemaining = remaining
-			}
+			rateLimit.checkResponse(request)
 			if(self.onStatsCallback) self.onStatsCallback()
 			meta = {}
 			linkString = request.getResponseHeader('Link')

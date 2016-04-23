@@ -77,7 +77,9 @@ var ctx = canvas.getContext("2d");
 var gh = new Github()
 gh.onStats(function()
 {
-	$('#ghStats').text(downloadCount + " : " + gh.requestsRemaining + " / " + gh.requestsLimit)
+	var text = (gh.rateLimit.counter||"?") + ":" + (gh.rateLimit.remaining||"?") + "/" + (gh.rateLimit.limit||"?") + "|" +
+		 	   (gh.searchRateLimit.counter||"?") + ":" + (gh.searchRateLimit.remaining||"?") + "/" + (gh.searchRateLimit.limit||"?")
+	$('#ghStats').text(text)
 })
 
 var speed = 0.25
