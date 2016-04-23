@@ -95,13 +95,13 @@ var Github = function(username, password){
 	}
 	this.search = {
 		// https://developer.github.com/v3/search/#search-repositories
-		repositories: function(options, callback){return main.path("search/repositories", options, callback)},
+		repositories: function(options, callback){return main.path("/search/repositories", options, callback)},
 		// https://developer.github.com/v3/search/#search-issues
-		issues: function(options, callback){return main.path("search/issues", options, callback)},
+		issues: function(options, callback){return main.path("/search/issues", options, callback)},
 		// https://developer.github.com/v3/search/#search-code
-		code: function(options, callback){return main.path("search/code", options, callback)},
+		code: function(options, callback){return main.path("/search/code", options, callback)},
 		// https://developer.github.com/v3/search/#search-users
-		users: function(options, callback){return main.path("search/users", options, callback)},
+		users: function(options, callback){return main.path("/search/users", options, callback)},
 	}
 	this.users = {}
 	this.enterprise = {}
@@ -115,7 +115,7 @@ var Github = function(username, password){
 	// HTTP API
 
 	this.path = function(path, options, callback){
-		var url = "https://api.github.com/" + path
+		var url = "https://api.github.com" + path
 		if(options != null)
 		{
 			var list = []

@@ -122,9 +122,7 @@ $('#ghAccount').on('change', function () {
 });
 
 $('#optRepo').on('change', function () {
-	direction = {
-		next: "https://api.github.com/repos/" + $('#ghAccount')[0].value + "/" + $('#optRepo')[0].value + "/commits"
-	}
+	direction = null
 	// TODO clear viz !
 	fetchCommits()
 	relTime = 0
@@ -151,7 +149,14 @@ function fetchCommits()
 	if(downloading)
 	{
 		downloadCount += 1
-		gh.get(direction.next, receiveCommits)
+		if(direction == null)
+		{
+			gh.repositories.commits($('#ghAccount')[0].value, $('#optRepo')[0].value, {}, receiveCommits)
+		}
+		else
+		{
+			gh.get(direction.next, receiveCommits)
+		}
 	}
 }
 
@@ -197,16 +202,16 @@ function receiveCommits(commits, meta)
 					break
 				row += 1
 			}
-			if(row < commitsByLevel.length)
-			{
-				commitsByLevel[row].unshift(c)
-			}
-			else
-			{
-				commitsByLevel.push([c])
-			}
 			if(row > rowMax) rowMax = row
 			if(cp) links.push({row: cp.row, date: cp.date, index: cp.index})
+		}
+		if(rowMax < commitsByLevel.length)
+		{
+			commitsByLevel[rowMax].unshift(c)
+		}
+		else
+		{
+			commitsByLevel.push([c])
 		}
 
 		var a = 0
@@ -265,7 +270,6 @@ function drawGame()
 	ctx.lineTo(w, h);
 	ctx.stroke()
 
-	// console.log(commitsFlow.length)
 	for(var i in commitsFlow)
 	{
 		dia = 10
