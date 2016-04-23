@@ -160,6 +160,10 @@ function fetchCommits()
 	}
 }
 
+var sequence = {
+	tracks: []
+}
+
 var downloadCount = 0
 function receiveCommits(commits, meta)
 {
@@ -184,11 +188,14 @@ function receiveCommits(commits, meta)
 
 	// recompute layout : 
 	var commitsByLevel = [] 
+	var ccount = 0
+	var commiters = {}
 
 	for(var i in commitsFlow)
 	{
 		c = commitsFlow[commitsFlow.length - 1 - i]
 
+		/*
 		var rowMax = 0
 		var links = []
 		for(var p in c.parents)
@@ -199,6 +206,8 @@ function receiveCommits(commits, meta)
 			while(row < commitsByLevel.length)
 			{
 				if(commitsByLevel[row][0].sha == shaP)
+					break
+				if(commitsByLevel[row][0].date < cp.date)
 					break
 				row += 1
 			}
@@ -213,10 +222,9 @@ function receiveCommits(commits, meta)
 		{
 			commitsByLevel.push([c])
 		}
+		*/
 
 		var a = 0
-		var ccount = 0
-		var commiters = {}
 		if(commiters[c.id])
 		{
 			a = commiters[c.id]
@@ -225,8 +233,28 @@ function receiveCommits(commits, meta)
 		{
 			a = commiters[c.id] = ccount++
 		}
+		var col = 0
+		if(i > 0)
+		{
+			var pc = commitsFlow[commitsFlow.length - 1 - (i - 1)]
+			var dif = Math.abs((c.date - pc.date) / (1000 * 60 * 60 * 24))
+			// console.log(pc.date)
+			// console.log(c.date)
+			// console.log(c.date - pc.date)
+			// console.log(dif)
 
-		c.display = {index: i, row: rowMax, col: commitsByLevel[rowMax].length, author: a}
+			if(dif > 4)
+			{
+				dif = 4
+			}
+			else if(dif < 1)
+			{
+				dif = 1
+			}
+			col = pc.display.col + dif
+		}
+
+		c.display = {index: i, row: a, col: col, author: a}
 	}
 
 
@@ -244,7 +272,6 @@ var mainloop = function() {
 window.requestAnimationFrame( mainloop );
 
 var relTime = 0
-
 
 function drawGame()
 {
@@ -311,7 +338,7 @@ function drawGame()
 		}
 		*/
 		ctx.beginPath()
-		ctx.arc(c.display.index * (dia + off), 10 + c.display.row * (dia + off), dia/2, 0, Math.PI * 2)
+		ctx.arc(c.display.col * (dia + off), 10 + c.display.row * (dia + off), dia/2, 0, Math.PI * 2)
 		ctx.fill()
 
 
@@ -324,8 +351,11 @@ function drawGame()
 	if(pos >= index && index < commitsFlow.length)
 	{
 		c = commitsFlow[commitsFlow.length - 1 - index]
-		Pd.send("commit", [c.display.row, c.display.author])
-		index += 1
+		if(c.display.col <= pos)
+		{
+			Pd.send("commit", [c.display.row, c.display.author])
+			index += 1
+		}
 	}
 
 
