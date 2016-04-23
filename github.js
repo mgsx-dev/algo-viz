@@ -44,7 +44,6 @@ var Github = function(username, password){
 		$.ajax({
 			url: url,
 			beforeSend: function (xhr){ 
-				console.log(self.username)
 				if(self.username) xhr.setRequestHeader('Authorization', make_base_auth(self.username, self.password)); 
 		    }
 		}).done(function(data, status, request){
@@ -84,6 +83,5 @@ var Github = function(username, password){
 function make_base_auth(user, password) {
   var tok = user + ':' + password;
   var hash = btoa(tok);
-  console.log(atob(hash))
   return "Basic " + hash;
 }

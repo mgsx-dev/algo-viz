@@ -77,7 +77,6 @@ var ctx = canvas.getContext("2d");
 var gh = new Github()
 gh.onStats(function()
 {
-	console.log("onstat")
 	$('#ghStats').text(downloadCount + " : " + gh.requestsRemaining + " / " + gh.requestsLimit)
 })
 
@@ -110,7 +109,6 @@ $('#playPauseButton').on('click', function () {
 });
 
 $('#ghAccount').on('change', function () {
-	console.log(gh)
 	gh.searchUserRepositories(this.value, {}, function(data, meta){
 		var options = $("#optRepo");
 		options.empty()
@@ -127,6 +125,9 @@ $('#optRepo').on('change', function () {
 	}
 	// TODO clear viz !
 	fetchCommits()
+	relTime = 0
+	index = 0
+	commitsFlow = []
 });
 
 
@@ -173,6 +174,55 @@ function receiveCommits(commits, meta)
 		commitsBySHA[commit.sha] = c
 	}
   	
+
+	// recompute layout : 
+	var commitsByLevel = [] 
+
+	for(var i in commitsFlow)
+	{
+		c = commitsFlow[commitsFlow.length - 1 - i]
+
+		var rowMax = 0
+		var links = []
+		for(var p in c.parents)
+		{
+			var shaP = c.parents[p].sha
+			var cp = commitsBySHA[shaP]
+			var row = 0
+			while(row < commitsByLevel.length)
+			{
+				if(commitsByLevel[row][0].sha == shaP)
+					break
+				row += 1
+			}
+			if(row < commitsByLevel.length)
+			{
+				commitsByLevel[row].unshift(c)
+			}
+			else
+			{
+				commitsByLevel.push([c])
+			}
+			if(row > rowMax) rowMax = row
+			if(cp) links.push({row: cp.row, date: cp.date, index: cp.index})
+		}
+
+		var a = 0
+		var ccount = 0
+		var commiters = {}
+		if(commiters[c.id])
+		{
+			a = commiters[c.id]
+		}
+		else
+		{
+			a = commiters[c.id] = ccount++
+		}
+
+		c.display = {index: i, row: rowMax, col: commitsByLevel[rowMax].length, author: a}
+	}
+
+
 }
 
 
@@ -191,27 +241,11 @@ var relTime = 0
 
 function drawGame()
 {
-	relTime += speed * 100
+	relTime += speed * 1000
+
+	pos = Math.floor(relTime / 1000)
 
 	var ratio = 0.003
-
-	while(index < commitsFlow.length)
-	{
-		c = commitsFlow[index]
-		// console.log(-((c.date - commitsFlow[0].date) / 60000) - relTime)
-		if((-(c.date - commitsFlow[0].date) / 60000)  - relTime < 0)
-		{
-			console.log(index + " / " + commitsFlow.length)
-			Pd.send("commit", [c.id % 1000 + 1000])
-			index += 1
-		}
-		else
-		{
-			
-			break
-		}
-		
-	}
 
 	ctx.fillStyle = "rgb(0,0,0)";
 	ctx.setTransform(1,0,0,1,0,0);
@@ -229,94 +263,65 @@ function drawGame()
 	ctx.lineTo(w, h);
 	ctx.stroke()
 
-	var commitsByLevel = [] // TODO arrange as tree !
-
+	// console.log(commitsFlow.length)
 	for(var i in commitsFlow)
 	{
+		dia = 10
+		off = 2
+		// if(i * (dia + off) > canvas.width) break 
 
-		c = commitsFlow[commitsFlow.length-1 - i]
+		c = commitsFlow[commitsFlow.length - 1 - i]
 
+		/*
+		var rowMax = 0
 		
+		*/
 
 		colors = ["rgb(255,0,0)", "rgb(0,0,255)"]
 
 		ctx.strokeStyle = c.id == commitsFlow[0].id ? colors[0] : colors[1];
 		ctx.fillStyle = c.id == commitsFlow[0].id ? colors[0] : colors[1];
+		if(i == index) ctx.fillStyle = "rgb(0,255,0)"
 
-		// console.log(c)
-		dif = -(c.date - commitsFlow[0].date) / 60000
-		time = dif // - relTime
-		if(time > 0)
+			
+
+		// TODO find row :
+		// if have parents then loop :
+		// if parent is last in row then ok
+		// else if last in next row before parent then ok for this one
+		// draw at max row
+		
+/*
+		for(var j in links)
 		{
-			x = time * ratio
+			var link = links[j]
+			var px = link.index * (dia + off) //-(link.date - commitsFlow[0].date) * ratio / 60000
 			ctx.beginPath()
-			ctx.moveTo(x, h);
-			ctx.lineTo(x, (c.message.length % h/2 + h/2));
+			ctx.moveTo(i * (dia + off), 10 + rowMax * (dia + off));
+			ctx.lineTo(px, 10 + rowMax * (dia + off));
+			ctx.lineTo(px, 10 + link.row * (dia + off));
 			ctx.stroke()
 
-			// TODO find row :
-			// if have parents then loop :
-			// if parent is last in row then ok
-			// else if last in next row before parent then ok for this one
-			// draw at max row
-			var rowMax = 0
-			var links = []
-			for(var p in c.parents)
-			{
-				var shaP = c.parents[p].sha
-				var cp = commitsBySHA[shaP]
-				var row = 0
-				while(row < commitsByLevel.length)
-				{
-					if(commitsByLevel[row][0].sha == shaP)
-						break
-					if(cp && commitsByLevel[row][0].date < cp.date)
-						break
-					row += 1
-				}
-				if(row < commitsByLevel.length)
-				{
-					commitsByLevel[row].unshift(c)
-				}
-				else
-				{
-					commitsByLevel.push([c])
-				}
-				if(row > rowMax) rowMax = row
-				if(cp) links.push({row: cp.row, date: cp.date, index: cp.index})
-				c.row = row
-			}
-
-			dia = 10
-			off = 2
-
-			for(var j in links)
-			{
-				var link = links[j]
-				var px = link.index * (dia + off) //-(link.date - commitsFlow[0].date) * ratio / 60000
-				ctx.beginPath()
-				ctx.moveTo(i * (dia + off), 10 + rowMax * (dia + off));
-				ctx.lineTo(px, 10 + rowMax * (dia + off));
-				ctx.lineTo(px, 10 + link.row * (dia + off));
-				ctx.stroke()
-
-			}
-			ctx.beginPath()
-			ctx.arc(i * (dia + off), 10 + rowMax * (dia + off), dia/2, 0, Math.PI * 2)
-			ctx.fill()
-
-
 		}
+		*/
+		ctx.beginPath()
+		ctx.arc(c.display.index * (dia + off), 10 + c.display.row * (dia + off), dia/2, 0, Math.PI * 2)
+		ctx.fill()
+
+
+		
 
 
 
 	}
-			ctx.strokeStyle = "green";
-			x = relTime * ratio
-			ctx.beginPath()
-			ctx.moveTo(x, 0);
-			ctx.lineTo(x, h);
-			ctx.stroke()
+
+	if(pos >= index && index < commitsFlow.length)
+	{
+		c = commitsFlow[commitsFlow.length - 1 - index]
+		Pd.send("commit", [c.display.row, c.display.author])
+		index += 1
+	}
+
 
 
 	window.requestAnimationFrame( mainloop );
