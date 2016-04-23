@@ -1,18 +1,7 @@
-/* 
+/**
+ * This is an uncomplete JS implementation of GitHub API V3
  * https://developer.github.com/v3/
  */
-
-/*
-TODO
-GET /repos/:owner/:repo/stats/commit_activity
-GET /repos/:owner/:repo/stats/participation
-https://api.github.com/users/mgsx-dev/events/public
-/search/issues
-GET /repos/:owner/:repo/forks
-GET /orgs/:org/members
-https://developer.github.com/v3/search/#search-code
-*/
-
 var Github = function(username, password){
 
 	var RateLimit = function(){
@@ -49,23 +38,70 @@ var Github = function(username, password){
 
 	var main = this
 
-	this.activity = {}
+	this.activity = {
+		user: {
+			// https://developer.github.com/v3/activity/events/#list-events-performed-by-a-user
+			public_events: function(user, callback){
+				return main.path("/users/" + user + "/events/public", callback)
+			},
+		}
+	}
 	this.gists = {}
 	this.gitdata = {}
 	this.issues = {}
 	this.migration = {}
 	this.miscellaneous = {}
-	this.organizations = {}
+	this.organizations = {
+		// https://developer.github.com/v3/orgs/members/#members-list
+		members: {
+			all: function(organization, options, callback){
+				return main.path("/orgs/" + organization + "/members", options, callback)
+			}
+		}
+	}
 	this.pullrequests = {}
 	this.repositories = {
 		// https://developer.github.com/v3/repos/commits/
 		commits: function(user, repository, options, callback){
 			return main.path("/repos/" + user + "/" + repository + "/commits", options, callback)
-		}		
+		},
+		statistics: {
+			// https://developer.github.com/v3/repos/statistics/#get-contributors-list-with-additions-deletions-and-commit-counts
+			contributors: function(user, repository, callback){
+				return main.path("/repos/" + user + "/" + repository + "/stats/contributors", {}, callback)
+			},
+			// https://developer.github.com/v3/repos/statistics/#get-the-last-year-of-commit-activity-data
+			commits: function(user, repository, callback){
+				return main.path("/repos/" + user + "/" + repository + "/stats/commit_activity", {}, callback)
+			},
+			// https://developer.github.com/v3/repos/statistics/#get-the-weekly-commit-count-for-the-repository-owner-and-everyone-else
+			participation: function(user, repository, callback){
+				return main.path("/repos/" + user + "/" + repository + "/stats/participation", {}, callback)
+			}
+		},
+		// https://developer.github.com/v3/repos/forks/#list-forks
+		forks: function(user, repository, options, callback){
+			return main.path("/repos/" + user + "/" + repository + "/forks", options, callback)
+		},
+		collaborators: {
+			// TODO is contributors are collaborators ???
+			// https://developer.github.com/v3/repos/collaborators/#list-collaborators
+			all: function(user, repository, callback){
+				return main.path("/repos/" + user + "/" + repository + "/collaborators", {}, callback)
+			},
+		}
+		
+
 	}
 	this.search = {
 		// https://developer.github.com/v3/search/#search-repositories
-		repositories: function(options, callback){return main.path("search/repositories", options, callback)}		
+		repositories: function(options, callback){return main.path("search/repositories", options, callback)},
+		// https://developer.github.com/v3/search/#search-issues
+		issues: function(options, callback){return main.path("search/issues", options, callback)},
+		// https://developer.github.com/v3/search/#search-code
+		code: function(options, callback){return main.path("search/code", options, callback)},
+		// https://developer.github.com/v3/search/#search-users
+		users: function(options, callback){return main.path("search/users", options, callback)},
 	}
 	this.users = {}
 	this.enterprise = {}
