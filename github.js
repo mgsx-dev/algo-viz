@@ -40,19 +40,57 @@ var Github = function(username, password){
 	this.rateLimit = new RateLimit()
 	this.onStatsCallback = null
 
+	// callbacks
+
 	this.onStats = function(callback){this.onStatsCallback = callback}
 
-	this.commits = function(user, repository, callback){
-		return this.path("/repos/" + user + "/" + repository + "/commits", callback)
+
+	// Low level API
+
+	var main = this
+
+	this.activity = {}
+	this.gists = {}
+	this.gitdata = {}
+	this.issues = {}
+	this.migration = {}
+	this.miscellaneous = {}
+	this.organizations = {}
+	this.pullrequests = {}
+	this.repositories = {
+		// https://developer.github.com/v3/repos/commits/
+		commits: function(user, repository, options, callback){
+			return main.path("/repos/" + user + "/" + repository + "/commits", options, callback)
+		}		
 	}
-	this.searchUserRepositories = function(user, options, callback){
-		return this.searchRepositories("user:" + user, options, callback)
+	this.search = {
+		// https://developer.github.com/v3/search/#search-repositories
+		repositories: function(options, callback){return main.path("search/repositories", options, callback)}		
 	}
-	this.searchRepositories = function(q, options, callback){
-		return this.path("search/repositories?q=" + q, callback)
+	this.users = {}
+	this.enterprise = {}
+
+	// High level API
+
+	this.searchUserRepositories = function(user, callback){
+		return this.search.repositories({q: "user:" + user}, callback)
 	}
-	this.path = function(path, callback){
-		return this.get("https://api.github.com/" + path, callback)
+
+	// HTTP API
+
+	this.path = function(path, options, callback){
+		var url = "https://api.github.com/" + path
+		if(options != null)
+		{
+			var list = []
+			for(var key in options){
+				list.push(key + "=" + options[key])
+			}
+			if(list.length > 0){
+				url += "?" + list.join("&")
+			}
+		}
+		return this.get(url, callback)
 	}
 	this.get = function(url, callback){
 		var isSearch = url.indexOf("https://api.github.com/search/") === 0

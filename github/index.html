@@ -111,7 +111,7 @@ $('#playPauseButton').on('click', function () {
 });
 
 $('#ghAccount').on('change', function () {
-	gh.searchUserRepositories(this.value, {}, function(data, meta){
+	gh.searchUserRepositories(this.value, function(data, meta){
 		var options = $("#optRepo");
 		options.empty()
 		options.append($("<option />").val('').text(''));
