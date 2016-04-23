@@ -161,6 +161,7 @@ var Github = function(username, password){
 		}).fail(function(status) {
 		    console.error(status)
 		});
+		return true
 	}
 }
 

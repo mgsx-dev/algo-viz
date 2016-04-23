@@ -55,6 +55,7 @@
 		<i class="fa fa-cloud-download fa-2x"></i>
 		<label>Github download (<span id="ghStats"></span>)</label>
 		<button id="playPauseButton" class="fa fa-pause-circle fa-2x">
+		<button id="replayButton" class="fa fa-pause-circle fa-2x">
 	</div>
 	<div class="field">
 		<i class="fa fa-github fa-2x"></i>
@@ -108,6 +109,19 @@ $('#playPauseButton').on('click', function () {
 	$(this).removeClass('fa-pause-circle')
 	$(this).addClass(downloading ? 'fa-pause-circle' : 'fa-play-circle')
 	fetchCommits()
+	if(!downloading) start() // XXX
+});
+
+$('#replayButton').on('click', function () {
+	relTime = 0
+	for(var i in sequence.tracks)
+	{
+		sequence.tracks[i].noteIndex = 0
+	}
+	for(var i = 0 ; i<8 ; i++)
+	{
+		Pd.send("t" + i, [0, 50])
+	}
 });
 
 $('#ghAccount').on('change', function () {
@@ -128,6 +142,11 @@ $('#optRepo').on('change', function () {
 	relTime = 0
 	index = 0
 	commitsFlow = []
+	sequence = {
+		tracks: []
+	}
+	ccount = 0
+	commiters = {}
 });
 
 
@@ -155,7 +174,10 @@ function fetchCommits()
 		}
 		else
 		{
-			gh.get(direction.next, receiveCommits)
+			if(!gh.get(direction.next, receiveCommits))
+			{
+				start()
+			}
 		}
 	}
 }
@@ -164,102 +186,84 @@ var sequence = {
 	tracks: []
 }
 
+var ccount = 0
+var commiters = {}
+
+
 var downloadCount = 0
 function receiveCommits(commits, meta)
 {
 	direction = meta
 
-	if(direction.next)
-	{
-		if(downloadTimer == null)
-		{
-			downloadTimer = window.setTimeout(fetchCommits, 1000)
-		}
-	}
-
 	for(var i in commits)
 	{
 		commit = commits[i]
-		c = {index: commitsFlow.length, sha: commit.sha, parents: commit.parents, id: commit.author.id, message: commit.commit.message, author: commit.commit.author.name, date: new Date(commit.commit.author.date)}
+		// if(!commit.author)
+		// {
+		// 	console.error(commit)
+		// }
+		
+		c = {
+			index: commitsFlow.length, 
+			sha: commit.sha, 
+			parents: commit.parents, 
+			id: commit.commit.author.name, 
+			message: commit.commit.message, 
+			author: commit.commit.author.name, 
+			date: new Date(commit.commit.author.date)
+		}
 		commitsFlow.push(c)
 		commitsBySHA[commit.sha] = c
 	}
   	
+	if(direction.next)
+	{
+		if(downloadTimer == null)
+		{
+			downloadTimer = window.setTimeout(fetchCommits, 10)
+		}
+	}
+	else
+	{
+		start()
+	}
 
-	// recompute layout : 
-	var commitsByLevel = [] 
-	var ccount = 0
-	var commiters = {}
+}
 
+function start()
+{
 	for(var i in commitsFlow)
 	{
 		c = commitsFlow[commitsFlow.length - 1 - i]
 
-		/*
-		var rowMax = 0
-		var links = []
-		for(var p in c.parents)
-		{
-			var shaP = c.parents[p].sha
-			var cp = commitsBySHA[shaP]
-			var row = 0
-			while(row < commitsByLevel.length)
-			{
-				if(commitsByLevel[row][0].sha == shaP)
-					break
-				if(commitsByLevel[row][0].date < cp.date)
-					break
-				row += 1
-			}
-			if(row > rowMax) rowMax = row
-			if(cp) links.push({row: cp.row, date: cp.date, index: cp.index})
-		}
-		if(rowMax < commitsByLevel.length)
-		{
-			commitsByLevel[rowMax].unshift(c)
-		}
-		else
-		{
-			commitsByLevel.push([c])
-		}
-		*/
+		
 
 		var a = 0
 		if(commiters[c.id])
 		{
 			a = commiters[c.id]
+			track = sequence.tracks[a]
+			lastNote = track.notes[track.notes.length-1]
+			lastCommit = lastNote.commits[lastNote.commits.length-1]
+			difInDays = Math.abs((c.date - lastCommit.date) / (1000 * 60 * 60 * 24))
+			if(difInDays < 3)
+			{
+				lastNote.commits.push(c)
+			}
+			else
+			{
+				track.notes.push({commits: [c]})
+			}
 		}
-		else
+		else if(ccount < 8 * 3) // XXX hard limit
 		{
 			a = commiters[c.id] = ccount++
-		}
-		var col = 0
-		if(i > 0)
-		{
-			var pc = commitsFlow[commitsFlow.length - 1 - (i - 1)]
-			var dif = Math.abs((c.date - pc.date) / (1000 * 60 * 60 * 24))
-			// console.log(pc.date)
-			// console.log(c.date)
-			// console.log(c.date - pc.date)
-			// console.log(dif)
-
-			if(dif > 4)
-			{
-				dif = 4
-			}
-			else if(dif < 1)
-			{
-				dif = 1
-			}
-			col = pc.display.col + dif
+			sequence.tracks.push({notes: [{commits: [c]}]})
 		}
 
-		c.display = {index: i, row: a, col: col, author: a}
 	}
 
-
 }
-
 
 
 
@@ -273,11 +277,18 @@ window.requestAnimationFrame( mainloop );
 
 var relTime = 0
 
+var ptime = new Date()
+
 function drawGame()
 {
-	relTime += speed * 1000
+	var ctime = new Date()
+	var dtime = ctime - ptime
+	ptime = ctime
 
-	pos = Math.floor(relTime / 1000)
+	relTime += dtime * speed / 100
+	pos = relTime
+	// relTime += speed
+
 
 	var ratio = 0.003
 
@@ -286,79 +297,114 @@ function drawGame()
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 	ctx.fillStyle = "orange";
-	ctx.strokeStyle = "red";
+	ctx.strokeStyle = "orange";
 	ctx.lineWidth = 1;
 
 	var h = canvas.height * 0.9
 	var w = canvas.width
 
+	var pixPerDay = 5
+	var dayPerSec = 1
+
+	var cur = pos * dayPerSec * pixPerDay
+
 	ctx.beginPath()
-	ctx.moveTo(0, h);
-	ctx.lineTo(w, h);
+	ctx.moveTo(cur, 0);
+	ctx.lineTo(cur, h);
 	ctx.stroke()
 
-	for(var i in commitsFlow)
+	var timeBase = commitsFlow.length > 0 ? commitsFlow[commitsFlow.length - 1].date : null
+
+	for(var trackIndex in sequence.tracks)
 	{
-		dia = 10
-		off = 2
-		// if(i * (dia + off) > canvas.width) break 
+		var track = sequence.tracks[trackIndex]
 
-		c = commitsFlow[commitsFlow.length - 1 - i]
-
-		/*
-		var rowMax = 0
-		
-		*/
-
-		colors = ["rgb(255,0,0)", "rgb(0,0,255)"]
-
-		ctx.strokeStyle = c.id == commitsFlow[0].id ? colors[0] : colors[1];
-		ctx.fillStyle = c.id == commitsFlow[0].id ? colors[0] : colors[1];
-		if(i == index) ctx.fillStyle = "rgb(0,255,0)"
-
-			
-
-		// TODO find row :
-		// if have parents then loop :
-		// if parent is last in row then ok
-		// else if last in next row before parent then ok for this one
-		// draw at max row
-		
-/*
-		for(var j in links)
+		for(var noteIndex in track.notes)
 		{
-			var link = links[j]
-			var px = link.index * (dia + off) //-(link.date - commitsFlow[0].date) * ratio / 60000
-			ctx.beginPath()
-			ctx.moveTo(i * (dia + off), 10 + rowMax * (dia + off));
-			ctx.lineTo(px, 10 + rowMax * (dia + off));
-			ctx.lineTo(px, 10 + link.row * (dia + off));
-			ctx.stroke()
+			var note = track.notes[noteIndex]
+			var timeStart = note.commits[0].date
+			var timeEnd = note.commits[note.commits.length - 1].date
 
-		}
-		*/
-		ctx.beginPath()
-		ctx.arc(c.display.col * (dia + off), 10 + c.display.row * (dia + off), dia/2, 0, Math.PI * 2)
-		ctx.fill()
+			x = pixPerDay * (timeStart - timeBase) / (1000 * 60 * 60 * 24)
+			w = Math.max(1, pixPerDay * (timeEnd - timeStart) / (1000 * 60 * 60 * 24))
+			y = trackIndex * 12
+			h = 10
 
+			// TODO review these switches ...
+			if(noteIndex + 1 == track.noteIndex)
+			{
+				if(pos < ((note.commits[note.commits.length - 1].date - timeBase) / (1000 * 60 * 60 * 24)) / dayPerSec)
+				{
+					ctx.fillStyle = "rgb(0,255,0)"
+				}
+				else
+				{
+					ctx.fillStyle = "rgb(255,255,0)"
+				}
+			}
+			else if(noteIndex == track.noteIndex)
+			{
+				ctx.fillStyle = "rgb(0,0,255)"
+			}
+			else
+			{
+				ctx.fillStyle = "rgb(255,0,0)"
+			}
 
-		
+			ctx.fillRect(x, y, w, h)
 
-
-
-	}
-
-	if(pos >= index && index < commitsFlow.length)
-	{
-		c = commitsFlow[commitsFlow.length - 1 - index]
-		if(c.display.col <= pos)
-		{
-			Pd.send("commit", [c.display.row, c.display.author])
-			index += 1
 		}
 	}
 
 
+	for(var trackIndex in sequence.tracks)
+	{
+		trackIndex = parseInt(trackIndex)
+		var audioTrack = trackIndex % 8
+		var track = sequence.tracks[trackIndex]
+		if(track.noteIndex === undefined)
+		{
+			track.noteIndex = 0
+		}
+		if(track.noteOffIndex === undefined)
+		{
+			track.noteOffIndex = null
+		}
+		if(track.noteOffIndex != null)
+		{
+			var noteOff = track.notes[track.noteOffIndex]
+			absSec = ((noteOff.commits[noteOff.commits.length - 1].date - timeBase) / (1000 * 60 * 60 * 24)) / dayPerSec
+			if(absSec < pos)
+			{
+				var rate = 1
+				if(track.noteIndex < track.notes.length)
+				{
+					note = track.notes[track.noteIndex]
+					rate = ((note.commits[0].date - noteOff.commits[noteOff.commits.length - 1].date) / (1000 * 60 * 60 * 24)) / dayPerSec
+					rate /= pixPerDay * speed
+				}
+				rate *= 0.5
+				rate = 0.5 // XXX fixed decay
+				// console.log("track " + audioTrack + " note off " + track.noteOffIndex)
+				Pd.send("t" + audioTrack, [0, rate * 1000])
+				track.noteOffIndex = null
+			}
+		}
+		
+		if(track.noteIndex < track.notes.length)
+		{
+			note = track.notes[track.noteIndex]
+			absSec = ((note.commits[0].date - timeBase) / (1000 * 60 * 60 * 24)) / dayPerSec
+			if(absSec < pos)
+			{
+				// TODO play lower some very long notes to avoid saturation ...
+				// console.log("track " + audioTrack + " note on " + track.noteIndex)
+				track.noteOffIndex = track.noteIndex
+				Pd.send("t" + audioTrack, [1, 50])
+				track.noteIndex++
+			}
+		}
+	}
 
 	window.requestAnimationFrame( mainloop );
 }
