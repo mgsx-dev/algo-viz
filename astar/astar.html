@@ -20,52 +20,29 @@ TODO :
 	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-hQpvDQiCJaD2H465dQfA717v7lu5qHWtDbWNPvaTJ0ID5xnPUlVXnKzq7b8YUkbN" crossorigin="anonymous">
 	<script   src="https://code.jquery.com/jquery-2.2.3.min.js"   integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="   crossorigin="anonymous"></script>
 
+	<link href="../style.css" rel="stylesheet">
+
 	<script src="../webpd.js"></script>
 	<script src="../utils.js"></script>
 	<script src="../algo-player.js"></script>
 	<script src="../canvas-display.js"></script>
+	<script src="../panel.js"></script>
 
 	<script src="astar-thoughts.js"></script>
 	<script src="astar-audio.js"></script>
 	<script src="astar-core.js"></script>
 	<script src="astar-render.js"></script>
 
-	<style>
-	.field{
-		vertical-align: top;
-	}
-	.field label{
-		vertical-align: top;
-		display:inline-block; 
-		width:220px;
-		padding-top: 4px;
-	}
-	.field input{
-		vertical-align: top;
-		display:inline-block;
-	}
-	#panelDetails{
-		padding: 15px;
-	}
-	#panelDetails div.field{
-		padding-top: 5px;
-		padding-bottom: 5px;
-		border-bottom: 1px solid #777;
-	}
-	.subfield{
-		margin-left: 245px;
-	}
-	</style>
 </head>
 
-<body style="background-color: 0; margin: 0; padding: 0; font-family: Verdana; font-size: 10px">
+<body>
 
-<div style="position: fixed; top: 0; right: 0; opacity: 0.9; background-color: 0; color: #fff">
+<div id="panel">
 	<div>
-		<button id="btShowHideDetails" class="fa fa-gears fa-4x" style="float: left;"></button>
-		<label id="panelTitle" style=" display: none; font-size: 4em; padding-left: 2em">I am A-STAR</label>
+		<button id="panelButton" class="fa fa-gears fa-4x"></button>
+		<label id="panelTitle">I am A-STAR</label>
 	</div>
-	<div id="panelDetails" style="display: none; clear: left;">
+	<div id="panelDetails">
 		<div class="field">
 			<i class="fa fa-clock-o fa-2x"></i>
 			<label>Want to change my brain speed ?</label>
@@ -143,7 +120,7 @@ TODO :
 	</div>
 </div>
 
-<canvas id="canvas" width="100" height="100" draggable="false"></canvas>
+<canvas id="canvas"></canvas>
 <script>
 
 var canvas = $('#canvas')[0]
@@ -206,10 +183,7 @@ $('#btResetTransform').on('click', function () {
     display.reset()
 });
 
-$('#btShowHideDetails').on('click', function () {
-    $('#panelDetails').css('display', $('#panelDetails').css('display') == 'block' ? 'none' : 'block');
-    $('#panelTitle').css('display', $('#panelTitle').css('display') == 'block' ? 'none' : 'block');
-});
+
 
 $('#optPathPersistence').on('change', function () {
     optPathPersistence = this.checked

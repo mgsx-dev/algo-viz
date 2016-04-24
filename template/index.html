@@ -1,0 +1,32 @@
+<html>
+<head>
+	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-hQpvDQiCJaD2H465dQfA717v7lu5qHWtDbWNPvaTJ0ID5xnPUlVXnKzq7b8YUkbN" crossorigin="anonymous">
+	<script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
+
+	<link href="../style.css" rel="stylesheet">
+
+	<script src="../webpd.js"></script>
+	<script src="../utils.js"></script>
+	<script src="../algo-player.js"></script>
+	<script src="../canvas-display.js"></script>
+	<script src="../panel.js"></script>
+
+</head>
+<body>
+	<div id="panel">
+		<div>
+			<button id="panelButton" class="fa fa-gears fa-4x"></button>
+			<label id="panelTitle">Template</label>
+		</div>
+		<div id="panelDetails">
+			<div class="field">
+				<i class="fa fa-clock-o fa-2x"></i>
+				<label>Field label</label>
+				<i class="fa fa-tachometer fa-2x"></i>
+				<input id="slider" type="range" min="1" max="100" value="50">
+			</div>
+		</div>
+	</div>
+	<canvas id="canvas"></canvas>
+</body>
+</html>

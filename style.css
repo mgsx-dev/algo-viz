@@ -1,0 +1,55 @@
+body{
+	background-color: 0; 
+	margin: 0; 
+	padding: 0; 
+	font-family: Verdana; 
+	font-size: 10px;
+}
+#panel{
+	position: fixed; 
+	top: 0; 
+	right: 0; 
+	opacity: 0.9; 
+	background-color: 0; 
+	color: #fff
+}
+#panelButton{
+	float: left;
+}
+#panelTitle{
+	display: none; 
+	font-size: 4em; 
+	padding-left: 2em
+}
+#panelDetails{
+	padding: 15px;
+	display: none; 
+	clear: left;
+}
+#panelDetails div.field{
+	padding-top: 5px;
+	padding-bottom: 5px;
+	border-bottom: 1px solid #777;
+}
+#panelDetails.open,
+#panelTitle.open {
+	display: block;
+}
+#canvas{
+}
+.field{
+	vertical-align: top;
+}
+.field label{
+	vertical-align: top;
+	display:inline-block; 
+	width:220px;
+	padding-top: 4px;
+}
+.field input{
+	vertical-align: top;
+	display:inline-block;
+}
+.subfield{
+	margin-left: 245px;
+}
