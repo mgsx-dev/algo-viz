@@ -7,11 +7,6 @@ document.addEventListener("contextmenu", function(e){
     e.preventDefault();
 }, false);
 
-// TODO private
-var gridHeight = null
-var gridWidth = null
-
-
 var CanvasDisplay = {
 
 	canvas: null,
@@ -23,6 +18,8 @@ var CanvasDisplay = {
 	ox: 0,
 	oy: 0,
 	dragging: false,
+	clientWidth: 1,
+	clientHeight: 1,
 
 	clear: function(color){
 		ctx.fillStyle = color;
@@ -98,15 +95,19 @@ var CanvasDisplay = {
 	{
 		this.xoffset = this.yoffset = 0
 		this.resize()
-		// TODO recompute scale !
-		// TODO redraw ...
+	},
+
+	changeSize: function(width, height){
+		this.clientWidth = width
+		this.clientHeight = height
+		this.resize()
 	},
 
 	resize: function(){
 		this.canvas.width = window.innerWidth;
     	this.canvas.height = window.innerHeight;
 
-    	this.scale = Math.min(canvas.width / gridWidth, canvas.height / gridHeight)
+    	this.scale = Math.min(canvas.width / this.clientWidth, canvas.height / this.clientHeight)
     	this.redraw()
 	},
 

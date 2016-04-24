@@ -7,6 +7,9 @@ var optDiagLinks = false
 var weight = 50 // 100000000
 var cstcost = 1
 
+var gridHeight = null
+var gridWidth = null
+
 var optimistic = 0.5
 var funnyTalkingRate = 0.5
 var funnyGlobalTalkingRate = 0.5
