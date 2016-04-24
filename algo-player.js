@@ -3,18 +3,9 @@ var AlgoPlayer = function()
 {
 	this.algo = null
 	this.stepMode = false
-	this.autoStart = true
 	this.running = false
 	this.timer = null
 	this.stepPerSeconds = 1
-
-	this.init = function()
-	{
-		if(this.autoStart)
-		{
-			this.start()
-		}
-	},
 
 	this.start = function()
 	{
