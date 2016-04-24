@@ -5,7 +5,7 @@ var optShowDistance = false
 var optAITalkings = false
 var optAIFunnyTalkings = false
 
-var margin = 2 // grid margin ... 
+var margin = 0.05 // grid margin ... 
 
 
 function drawStuff() {
@@ -22,12 +22,9 @@ function drawStuff() {
      }
 	
 
-
-
-	ctx.fillStyle = "rgb(0,0,0)";
-	ctx.setTransform(1,0,0,1,0,0);
-	ctx.fillRect(0, 0, canvas.width, canvas.height);
-	ctx.setTransform(1,0,0,1, CanvasDisplay.xoffset, CanvasDisplay.yoffset);
+     CanvasDisplay.clear("rgb(0,0,0)")
+     CanvasDisplay.begin()
+	
 
 
 
@@ -62,27 +59,27 @@ function drawStuff() {
 				ctx.fillStyle = "rgb(" + base + ","+full+"," + base + ")";
 			}
 
-			ctx.fillRect (j*cellSize + margin/2, i*cellSize + margin/2, cellSize-margin, cellSize-margin);
+			ctx.fillRect (j + margin/2, i + margin/2, 1-margin, 1-margin);
 			if(optPathPersistence && n.path_amount > 0)
 			{
 				pm = n.path_amount / (1 + total_paths)
 				ctx.fillStyle = "rgba(255,127,0," + pm + ")";
 				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 3,0,2*Math.PI)
+				ctx.arc(j+0.5, i+0.5, 0.33,0,2*Math.PI)
 				ctx.fill()
 			}
 			if(n.path)
 			{
 				ctx.fillStyle = "rgb(255,127,0)";
 				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.arc(j+0.5, i+0.5, 0.25,0,2*Math.PI)
 				ctx.fill()
 			}
 			else if(n == dst)
 			{
 				ctx.fillStyle = "rgb(255,0,0)";
 				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize / 4,0,2*Math.PI)
+				ctx.arc(j+0.5, i+0.5, 0.25,0,2*Math.PI)
 				ctx.fill()
 			}
 			else if(n.complete)
@@ -90,7 +87,7 @@ function drawStuff() {
 				radius = 0.25
 				ctx.fillStyle = "rgb(0,120,200)";
 				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
+				ctx.arc(j+0.5, i+0.5, radius,0,2*Math.PI)
 				ctx.fill()
 			}
 			else if(n.head)
@@ -98,7 +95,7 @@ function drawStuff() {
 				radius = 0.15
 				ctx.fillStyle = "rgb(64,200,255)";
 				ctx.beginPath()
-				ctx.arc((j+0.5)*cellSize, (i+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
+				ctx.arc(j+0.5, i+0.5, radius,0,2*Math.PI)
 				ctx.fill()
 			}
 
@@ -123,12 +120,12 @@ function drawStuff() {
 				{
 					measures = ctx.measureText(text)
 
-					scale = cellSize * size / measures.width
+					scale = size / measures.width
 
 					ctx.save();
 					ctx.fillStyle = color
 					ctx.font="20px Verdana";
-					ctx.translate((j+0.5)*cellSize, (i+0.5)*cellSize);
+					ctx.translate(j+0.5, i+0.5);
 					ctx.scale(scale, scale);
 					
 					ctx.textAlign = "center";
@@ -149,17 +146,17 @@ function drawStuff() {
 			if (n == src || n == dst)
 			{
 				ctx.strokeStyle = n == src ? "rgb(0,0,255)" : "rgb(255,0,0)";
-				ctx.lineWidth = 2;
+				ctx.lineWidth = 0.1;
 				ctx.beginPath()
-				ctx.arc((n.x+0.5)*cellSize, (n.y+0.5)*cellSize, cellSize / 3,0,2*Math.PI)
+				ctx.arc(n.x+0.5, n.y+0.5, 0.35,0,2*Math.PI)
 				ctx.stroke()
 			}
 			if (n == current)
 			{
 				ctx.strokeStyle = "rgb(255,0,255)";
-				ctx.lineWidth = 2;
+				ctx.lineWidth = 0.1;
 				ctx.beginPath()
-				ctx.arc((n.x+0.5)*cellSize, (n.y+0.5)*cellSize, cellSize / 3,0,2*Math.PI)
+				ctx.arc(n.x+0.5, n.y+0.5, 0.35,0,2*Math.PI)
 				ctx.stroke()
 			}
 
@@ -176,14 +173,14 @@ function drawStuff() {
 				ctx.fillStyle = "rgb(50,250,190)";
 
 				ctx.save();
-				ctx.translate((n.parent.x+0.5)*cellSize, (n.parent.y+0.5)*cellSize);
+				ctx.translate(n.parent.x+0.5, n.parent.y+0.5);
 				ctx.rotate(angle);
-				ctx.translate(cellSize*(dist-1)/2, 0)
+				ctx.translate((dist-1)/2, 0)
 
 				ctx.beginPath();
-				ctx.moveTo(cellSize * lscale, 0);
-				ctx.lineTo(cellSize * (1 - lscale), cellSize * scale);
-				ctx.lineTo(cellSize * (1 - lscale), -cellSize * scale);
+				ctx.moveTo(lscale, 0);
+				ctx.lineTo(1 - lscale, scale);
+				ctx.lineTo(1 - lscale, -scale);
 				ctx.fill();
 
 				ctx.restore();
@@ -202,33 +199,33 @@ function drawStuff() {
 	{
 		radius = 0.35
 		ctx.strokeStyle = "rgb(255,255,0)";
-		ctx.lineWidth = 5;
+		ctx.lineWidth = 0.1;
 		ctx.beginPath()
-		ctx.arc((neighbor.x+0.5)*cellSize, (neighbor.y+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
+		ctx.arc(neighbor.x+0.5, neighbor.y+0.5, radius,0,2*Math.PI)
 		ctx.stroke()
 
 		radius = 0.35
 		ctx.strokeStyle = "rgb(255,128,0)";
-		ctx.lineWidth = 5;
+		ctx.lineWidth = 0.1;
 		ctx.beginPath()
-		ctx.arc((neighbor.from.x+0.5)*cellSize, (neighbor.from.y+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
+		ctx.arc(neighbor.from.x+0.5, neighbor.from.y+0.5, radius,0,2*Math.PI)
 		ctx.stroke()
 	}
 	if(head != null)
 	{
 		radius = 0.35
 		ctx.strokeStyle = "rgb(255,128,0)";
-		ctx.lineWidth = 5;
+		ctx.lineWidth = 0.1;
 		ctx.beginPath()
-		ctx.arc((head.x+0.5)*cellSize, (head.y+0.5)*cellSize, cellSize * radius,0,2*Math.PI)
+		ctx.arc(head.x+0.5, head.y+0.5, radius,0,2*Math.PI)
 		ctx.stroke()
 	}
 
 
 	if(neighbor && evaluateDistance)
 	{
-		var from = {x: (neighbor.x+0.5)*cellSize, y: (neighbor.y+0.5)*cellSize}
-		var to   = {x: (dst.x+0.5)*cellSize,      y: (dst.y+0.5)*cellSize}
+		var from = {x: neighbor.x+0.5, y: neighbor.y+0.5}
+		var to   = {x: dst.x+0.5,      y: dst.y+0.5}
 
 		// add offset to not overlap text
 		dx = to.x - from.x
@@ -236,8 +233,8 @@ function drawStuff() {
 		l = Math.sqrt(dx*dx+dy*dy)
 		if(l>0)
 		{
-			from.x += cellSize * 0.35 * dx/l
-			from.y += cellSize * 0.35 * dy/l
+			from.x += 0.35 * dx/l
+			from.y += 0.35 * dy/l
 		}
 
 		var grad= ctx.createLinearGradient(from.x, from.y, to.x, to.y);
@@ -245,7 +242,7 @@ function drawStuff() {
 		grad.addColorStop(1, "red");
 
 		ctx.strokeStyle = grad;
-		ctx.lineWidth = 5;
+		ctx.lineWidth = 0.25;
 		
 		ctx.beginPath();
 		ctx.moveTo(from.x, from.y);
@@ -270,16 +267,22 @@ function drawStuff() {
 			angle = Math.atan2(dy, dx)
 			l = Math.sqrt(dx*dx+dy*dy)
 
+			scale = 1 / CanvasDisplay.scale
 
 			ctx.save();
 			ctx.fillStyle = "orange" // ctx.createLinearGradient(0, 0, l, 0);
 			ctx.font="20px Verdana";
 			ctx.translate(left.x, left.y);
+			
 			ctx.rotate(angle);
 			
+
+			ctx.scale(scale, scale)
+
 			ctx.textAlign = "center";
-			ctx.fillText(String.format("{0}", neighbor.h.toFixed(2)), l/2, -5);
+			ctx.fillText(String.format("{0}", neighbor.h.toFixed(2)), 1/scale * l/2, -0.25/scale);
 			ctx.restore();
+
 		}
 	}
 	if(optAITalkings && subject && aiWords != null)
@@ -290,8 +293,8 @@ function drawStuff() {
     	ctx.font="10px Verdana";
 
 		box = {
-			x: (subject.x + 1.5) * cellSize,
-			y: (subject.y - 0.5) * cellSize,
+			x: subject.x + 1.5,
+			y: subject.y - 0.5,
 			w: 0,
 			h: padding}
 
@@ -314,13 +317,19 @@ function drawStuff() {
 		ctx.lineWidth = 3;
     	ctx.fillStyle = "rgb(255,255,255)";
 
-		ctx.fillRect (box.x, box.y, box.w, box.h);
-		ctx.strokeRect (box.x, box.y, box.w, box.h);
+		size = 10
+		scale = 1 / CanvasDisplay.scale // size / box.w
+		ctx.save();
+		ctx.translate(box.x, box.y - box.h * scale)
+		ctx.scale(scale, scale)
+
+		ctx.fillRect (0, 0, box.w, box.h);
+		ctx.strokeRect (0, 0, box.w, box.h);
 
 		offset = 0.5 * 0.35 * Math.SQRT2
 		ctx.beginPath();
-		ctx.moveTo((subject.x + 0.5 + offset) * cellSize, (subject.y + 0.5 - offset) * cellSize); // offset a little
-		ctx.lineTo(box.x, box.y + box.h);
+		ctx.moveTo((subject.x - box.x + 0.5 + offset) / scale, (subject.y - box.y + 0.5 - offset) / scale + box.h); // offset a little
+		ctx.lineTo(0, 0 + box.h);
 		ctx.stroke();
 
 		ctx.fillStyle = "rgb(0,0,0)";
@@ -329,7 +338,7 @@ function drawStuff() {
 		for(var index in aiWords)
 		{
 			aiWord = aiWords[index]
-			ctx.fillText(aiWord, box.x + padding, box.y + (padding + textHeight) * y);
+			ctx.fillText(aiWord, padding, (padding + textHeight) * y);
 			y += 1
 		}
 
@@ -337,8 +346,9 @@ function drawStuff() {
 		{
 			ctx.font="italic 10px Verdana";
 			ctx.fillStyle = "rgb(127,127,127)";
-    		ctx.fillText(aiFunnyWords, box.x + padding, box.y + (padding + textHeight) * y);
+    		ctx.fillText(aiFunnyWords, padding, (padding + textHeight) * y);
 		}
+		ctx.restore()
 	}
 
 }

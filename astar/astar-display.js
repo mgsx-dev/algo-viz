@@ -9,7 +9,6 @@ document.addEventListener("contextmenu", function(e){
 
 // TODO private
 var dragging = false
-var cellSize = 0
 var gridHeight = null
 var gridWidth = null
 
@@ -25,8 +24,19 @@ var CanvasDisplay = {
 	ox: 0,
 	oy: 0,
 
+	clear: function(color){
+		ctx.fillStyle = color;
+		ctx.setTransform(1,0,0,1,0,0);
+		ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+	},
+
+	begin: function(){
+		ctx.setTransform(this.scale,0,0,this.scale, this.xoffset, this.yoffset);
+	},
+
 	init: function(){
-		this.canvas = $('#canvas')[0]
+		this.canvas = $('#canvas')[0] // TODO param
+		var self = this
 		$('#canvas').on('mousewheel', function (jqe) {
 			e = jqe.originalEvent
 		    CanvasDisplay.zoom(e.x, e.y, e.wheelDeltaY < 0 ? 0.5 : 2.0)
@@ -56,8 +66,8 @@ var CanvasDisplay = {
 			e = jqe.originalEvent
 		    if(!dragging)
 			{
-				x = Math.floor((e.x - CanvasDisplay.xoffset) / cellSize)
-				y = Math.floor((e.y - CanvasDisplay.yoffset) / cellSize)
+				x = Math.floor((e.x - CanvasDisplay.xoffset) / self.scale)
+				y = Math.floor((e.y - CanvasDisplay.yoffset) / self.scale)
 				clickGraph(x, y) // TODO POO
 			}
 			dragging = false
@@ -74,13 +84,13 @@ var CanvasDisplay = {
 
 	zoom: function (ox, oy, rate)
 	{
-		sx = (ox - this.xoffset) / cellSize
-		sy = (oy - this.yoffset) / cellSize
-		this.xoffset += sx * cellSize
-		this.yoffset += sy * cellSize
-		cellSize *= rate
-		this.xoffset -= sx * cellSize
-		this.yoffset -= sy * cellSize
+		sx = (ox - this.xoffset) / this.scale
+		sy = (oy - this.yoffset) / this.scale
+		this.xoffset += sx * this.scale
+		this.yoffset += sy * this.scale
+		this.scale *= rate
+		this.xoffset -= sx * this.scale
+		this.yoffset -= sy * this.scale
 		this.redraw()
 	},
 
@@ -96,12 +106,13 @@ var CanvasDisplay = {
 		this.canvas.width = window.innerWidth;
     	this.canvas.height = window.innerHeight;
 
-    	cellSize = Math.min(canvas.width / gridWidth, canvas.height / gridHeight)
+    	this.scale = Math.min(canvas.width / gridWidth, canvas.height / gridHeight)
     	this.redraw()
 	},
 
 	redraw: function()
 	{
+		// TODO set matrix
 		// TODO POO
 		drawStuff()
 	}
