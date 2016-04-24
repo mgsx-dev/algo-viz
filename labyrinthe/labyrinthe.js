@@ -8,6 +8,10 @@ var unvisited = null
 var VEC = [[0,-1], [-1, 0], [0, 1], [1, 0]] // ULDR vectors
 var current = null
 var links = null
+var picks = null
+var pickCounter = 0
+var insider = null
+var insiders = null
 
 $(function() {
 	$.get('labyrinthe.pd', function(patchStr) {
@@ -31,7 +35,7 @@ $(function() {
 		step: step,
 		draw: draw,
 	}
-	player.stepPerSeconds = 10
+	player.stepPerSeconds = 12
 	player.start()
 
 	$('#sliderSize').change(function(){
@@ -44,6 +48,10 @@ $(function() {
 });
 
 function reset(){
+	insider = null
+	insiders = []
+	pickCounter = 0
+	picks = []
 	current = null
 	nodes = []
 	unvisited = []
@@ -53,7 +61,7 @@ function reset(){
 		var line = []
 		for(var x=0 ; x<gridW ; x++)
 		{
-			var cell = {x: x, y: y, visited: false, links: []}
+			var cell = {x: x, y: y, visited: false, links: [], picked: false, inside: false, pole: false}
 			line.push(cell)
 			unvisited.push(cell)
 		}	
@@ -83,12 +91,103 @@ function findLen(x, y, dx, dy){
 	}
 	return len
 }
+function findLenInside(x, y, dx, dy){
+	var len = 0
+	while(true)
+	{
+		x+=dx
+		y+=dy
+		if(x<0||x>=gridW||y<0||y>=gridH)
+		{
+			break
+		}
+		if(!nodes[y][x].visited)
+		{
+			break
+		}
+		len++
+	}
+	return len
+}
 
 function step(){
 
+	// start at 0 to leave introdution
+	if(pickCounter % (2*(1+Math.floor(Math.random() * 8))) == 0)
+	{
+		var node = unvisited.splice(Math.floor(Math.random() * unvisited.length), 1)[0]
+		node.visited = true
+		node.picked = true
+		// node.inside = true
+		Pd.send("pick", [])
+	}
+	pickCounter++ 
+	
+	if(insider == null && insiders.length > 0 && pickCounter % (2*(1+Math.floor(Math.random() * 8))) == 0)
+	{
+		insider = insiders.splice(Math.floor(Math.random() * insiders.length), 1)[0]
+		insider.inside = true
+		Pd.send("ins", [Math.random() * 10])
+		var gx = Math.floor(Math.random() * gridW) / 6 + 1
+		var gy = Math.floor(Math.random() * gridH)/ 6 + 1
+		for(var cy=0 ; cy<gy ; cy++)
+		{
+			for(var cx=0 ; cx<gx ; cx++)
+			{
+				var x = insider.x + cx
+				var y = insider.y + cy
+				if(x<0||x>=gridW||y<0||y>=gridH)
+					{}else{
+						nodes[y][x].pole = !nodes[y][x].pole
+					}
+			}
+		}
+		insider = null
+	}
+	if(false && insider != null)
+	{
+		var dirs = []
+		for(var i=0 ; i<4 ; i++)
+		{
+			var vec = VEC[i]
+			var len = findLenInside(insider.x, insider.y, vec[0], vec[1])
+			if(len > 0)
+			{
+				dirs.push({vec: vec, len: len})
+			}
+
+		}
+		insider.inside = true
+		// choose a direction
+		if(dirs.length > 0)
+		{
+			dir = dirs[Math.floor(Math.random() * dirs.length)]
+			len = 1 + Math.floor(Math.random() * dir.len)
+			x = insider.x
+			y = insider.y
+			var next = null
+			for(var i=0 ; i<len ; i++)
+			{
+				x += dir.vec[0]
+				y += dir.vec[1]
+				next = nodes[y][x]
+				next.inside = true
+				insiders.splice(insiders.indexOf(next), 1)
+				insider = next
+			}
+		}
+		else
+		{
+			
+		}	
+		insider = null
+	}
+
 	if(current == null && unvisited.length > 0)
 	{
+		Pd.send("head", [])
 		current = unvisited.splice(Math.floor(Math.random() * unvisited.length), 1)[0]
+		insiders.push(current)
 	}
 	else if(current != null)
 	{
@@ -121,6 +220,7 @@ function step(){
 				unvisited.splice(unvisited.indexOf(next), 1)
 				links.push([current, next])
 				current = next
+				insiders.push(current)
 			}
 			Pd.send("seg", [len])
 		}
@@ -147,9 +247,7 @@ function draw()
 	if(nodes == null)
 		return
 
-	var cellSize = 0.3
 	var linkSize = 0.1
-	var cellMargin = (1 - cellSize)/2
 
 	ctx.strokeStyle = "rgb(158,0,0)"
 	ctx.lineWidth = linkSize
@@ -168,15 +266,29 @@ function draw()
 	{
 		for(var x=0 ; x<gridW ; x++)
 		{
+			var cellSize = 0.3
+			//var cellMargin = (1 - cellSize)/2
 			var node = nodes[y][x]
-			if(node.visited)
+			if(node.picked)
 			{
-				ctx.fillStyle = "rgb(128,0,0)"
+				cellSize = 0.4
+
+				ctx.fillStyle = node.pole ? "rgb(255,255,0)" : "rgb(230,200,30)"
+			}
+			else if(node.visited)
+			{
+				ctx.fillStyle = node.pole ? "rgb(255,0,0)" : "rgb(128,0,0)"
+			}
+			else if(node.pole)
+			{
+				ctx.fillStyle = "rgb(70,70,80)"
 			}
 			else
 			{
-				ctx.fillStyle = "rgb(128,128,128)"
+				ctx.fillStyle = "rgb(40,40,40)"
 			}
+			cellSize = node.pole ? cellSize * 1.3 : cellSize
+			var cellMargin = (1 - cellSize)/2
 			ctx.fillRect(x+cellMargin, y+cellMargin, cellSize, cellSize)
 		}	
 	}
