@@ -8,7 +8,6 @@ document.addEventListener("contextmenu", function(e){
 }, false);
 
 // TODO private
-var dragging = false
 var gridHeight = null
 var gridWidth = null
 
@@ -23,6 +22,7 @@ var CanvasDisplay = {
 	py: 0,
 	ox: 0,
 	oy: 0,
+	dragging: false,
 
 	clear: function(color){
 		ctx.fillStyle = color;
@@ -45,12 +45,12 @@ var CanvasDisplay = {
 			e = jqe.originalEvent
 			if(e.which == 1) // left click
 			{
-				dragging = true
+				self.dragging = true
 				CanvasDisplay.pan(e.x-CanvasDisplay.px, e.y-CanvasDisplay.py)
 			}
 			else if(e.which != 0) // middle click (2) right click (3)
 			{
-				dragging = true
+				self.dragging = true
 				CanvasDisplay.zoom(CanvasDisplay.ox, CanvasDisplay.oy, CanvasDisplay.py - e.y < 0 ? 1.02 : 0.98)
 			}		    
 		    CanvasDisplay.px = e.x
@@ -58,19 +58,19 @@ var CanvasDisplay = {
 		})
 		$('#canvas').on('mousedown', function (jqe) {
 			e = jqe.originalEvent
-		    dragging = false
+		    self.dragging = false
 			CanvasDisplay.ox = e.x
 			CanvasDisplay.oy = e.y
 		})
 		$('#canvas').on('click', function (jqe) {
 			e = jqe.originalEvent
-		    if(!dragging)
+		    if(!self.dragging)
 			{
 				x = Math.floor((e.x - CanvasDisplay.xoffset) / self.scale)
 				y = Math.floor((e.y - CanvasDisplay.yoffset) / self.scale)
 				clickGraph(x, y) // TODO POO
 			}
-			dragging = false
+			self.dragging = false
 		})
 		$( window ).resize(function() {CanvasDisplay.resize()})
 	},
