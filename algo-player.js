@@ -1,4 +1,15 @@
+/*
 
+Example :
+
+player = new AlgoPlayer()
+player.algo = {
+	init: function(){},
+	reset: function(){},
+	step: function(){},
+	draw: function(){},
+}
+*/
 var AlgoPlayer = function()
 {
 	this.algo = null
