@@ -30,7 +30,6 @@ var aiFunnyWords = null
 
 var subject = null
 
-var timeScale = 10
 var evaluateDistance
 
 var contextualAIThought = null

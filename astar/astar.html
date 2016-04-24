@@ -22,7 +22,7 @@ TODO :
 
 	<script src="../webpd.js"></script>
 	<script src="../utils.js"></script>
-	<script src="algo-player.js"></script>
+	<script src="../algo-player.js"></script>
 
 	<script src="astar-thoughts.js"></script>
 	<script src="astar-audio.js"></script>
@@ -149,22 +149,25 @@ TODO :
 var canvas = document.getElementById("canvas")
 var ctx = canvas.getContext("2d");
 
+var player = new AlgoPlayer()
+player.stepPerSeconds = 10
+
 function recreateGraph()
 {
 	createGraph()
-	AlgoPlayer.stop()
+	player.stop()
 	CanvasDisplay.resize()
 }
 
 function updateGraph()
 {
 	createGraph()
-	AlgoPlayer.stop()
+	player.stop()
     drawStuff()
 }
 
 $('#timeSlider').on('change', function () {
-	timeScale = this.value
+	player.stepPerSeconds = this.value
 });
 
 $('#sizeSlider').on('change', function () {
@@ -233,19 +236,19 @@ $('#optimisticSlider').on('change', function () {
 });
 
 $('#btNextStep').on('click', function () {
-	AlgoPlayer.pause()
-	AlgoPlayer.stepMode = true
-	AlgoPlayer.nextStep()
+	player.pause()
+	player.stepMode = true
+	player.nextStep()
 });
 
 $('#btPlay').on('click', function () {
-	AlgoPlayer.stepMode = false
-	AlgoPlayer.start()   
+	player.stepMode = false
+	player.start()   
 });
 
 $('#btNext').on('click', function () {
-	AlgoPlayer.stop()
-	AlgoPlayer.start()
+	player.stop()
+	player.start()
 });
 
 $(function() {
@@ -254,8 +257,8 @@ $(function() {
 
 	recreateGraph()
 
-	AlgoPlayer.algo = AStarAlgo
-	AlgoPlayer.init()	
+	player.algo = AStarAlgo
+	player.init()	
 });
 
 
@@ -314,13 +317,13 @@ function clickGraph(x,y) {
 	else if (dst == null) { 
 		dst = node(x,y)
 		head = src
-		AlgoPlayer.start()
+		player.start()
 	}
 	else{
-		AlgoPlayer.pause()
+		player.pause()
 		dst = node(x,y)
 		head = src
-		AlgoPlayer.start()
+		player.start()
 	}
 	drawStuff();
 }
