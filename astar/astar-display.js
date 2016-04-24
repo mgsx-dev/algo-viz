@@ -1,85 +1,87 @@
-$(function() {
-	CanvasDisplay.init()
-});
 
-// TODO better way ? in POO ?
-document.addEventListener("contextmenu", function(e){
-    e.preventDefault();
-}, false);
+var CanvasDisplay = function(canvas){
 
-var CanvasDisplay = {
+	this.canvas = canvas
+	this.ctx = canvas.getContext("2d");
+	this.xoffset = 0
+	this.yoffset = 0
+	this.scale = 1
+	this.px = 0
+	this.py = 0
+	this.ox = 0
+	this.oy = 0
+	this.dragging = false
+	this.clientWidth = 1
+	this.clientHeight = 1
+	this.onClick = null
+	this.onDraw = null
 
-	canvas: null,
-	xoffset: 0,
-	yoffset: 0,
-	scale: 1,
-	px: 0,
-	py: 0,
-	ox: 0,
-	oy: 0,
-	dragging: false,
-	clientWidth: 1,
-	clientHeight: 1,
+	// prevent right click on canvas
+	canvas.addEventListener("contextmenu", function(e){
+	    e.preventDefault();
+	}, false);
 
-	clear: function(color){
-		ctx.fillStyle = color;
-		ctx.setTransform(1,0,0,1,0,0);
-		ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-	},
+	this.clear = function(color){
+		this.ctx.fillStyle = color;
+		this.ctx.setTransform(1,0,0,1,0,0);
+		this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+	}
 
-	begin: function(){
-		ctx.setTransform(this.scale,0,0,this.scale, this.xoffset, this.yoffset);
-	},
+	this.begin = function(){
+		this.ctx.setTransform(this.scale,0,0,this.scale, this.xoffset, this.yoffset);
+	}
 
-	init: function(){
-		this.canvas = $('#canvas')[0] // TODO param
+	this.init = function(){
 		var self = this
 		$('#canvas').on('mousewheel', function (jqe) {
 			e = jqe.originalEvent
-		    CanvasDisplay.zoom(e.x, e.y, e.wheelDeltaY < 0 ? 0.5 : 2.0)
+		    self.zoom(e.x, e.y, e.wheelDeltaY < 0 ? 0.5 : 2.0)
 		})
 		$('#canvas').on('mousemove', function (jqe) {
 			e = jqe.originalEvent
 			if(e.which == 1) // left click
 			{
 				self.dragging = true
-				CanvasDisplay.pan(e.x-CanvasDisplay.px, e.y-CanvasDisplay.py)
+				self.pan(e.x-self.px, e.y-self.py)
 			}
 			else if(e.which != 0) // middle click (2) right click (3)
 			{
 				self.dragging = true
-				CanvasDisplay.zoom(CanvasDisplay.ox, CanvasDisplay.oy, CanvasDisplay.py - e.y < 0 ? 1.02 : 0.98)
+				self.zoom(self.ox, self.oy, self.py - e.y < 0 ? 1.02 : 0.98)
 			}		    
-		    CanvasDisplay.px = e.x
-		    CanvasDisplay.py = e.y
+		    self.px = e.x
+		    self.py = e.y
 		})
 		$('#canvas').on('mousedown', function (jqe) {
 			e = jqe.originalEvent
 		    self.dragging = false
-			CanvasDisplay.ox = e.x
-			CanvasDisplay.oy = e.y
+			self.ox = e.x
+			self.oy = e.y
 		})
 		$('#canvas').on('click', function (jqe) {
 			e = jqe.originalEvent
 		    if(!self.dragging)
 			{
-				x = Math.floor((e.x - CanvasDisplay.xoffset) / self.scale)
-				y = Math.floor((e.y - CanvasDisplay.yoffset) / self.scale)
-				clickGraph(x, y) // TODO POO
+				x = Math.floor((e.x - self.xoffset) / self.scale)
+				y = Math.floor((e.y - self.yoffset) / self.scale)
+				if(self.onClick)
+				{
+					self.onClick(x, y)
+				}
 			}
 			self.dragging = false
 		})
-		$( window ).resize(function() {CanvasDisplay.resize()})
-	},
+		$( window ).resize(function() {self.resize()})
+	}
 
-	pan: function(dx, dy)
+	this.pan = function(dx, dy)
 	{
 		this.xoffset += dx
 		this.yoffset += dy
 		this.redraw()
-	},
+	}
 
-	zoom: function (ox, oy, rate)
+	this.zoom = function (ox, oy, rate)
 	{
 		sx = (ox - this.xoffset) / this.scale
 		sy = (oy - this.yoffset) / this.scale
@@ -89,33 +91,34 @@ var CanvasDisplay = {
 		this.xoffset -= sx * this.scale
 		this.yoffset -= sy * this.scale
 		this.redraw()
-	},
+	}
 
-	reset: function()
+	this.reset = function()
 	{
 		this.xoffset = this.yoffset = 0
 		this.resize()
-	},
+	}
 
-	changeSize: function(width, height){
+	this.changeSize = function(width, height){
 		this.clientWidth = width
 		this.clientHeight = height
 		this.resize()
-	},
+	}
 
-	resize: function(){
+	this.resize = function(){
 		this.canvas.width = window.innerWidth;
     	this.canvas.height = window.innerHeight;
 
     	this.scale = Math.min(canvas.width / this.clientWidth, canvas.height / this.clientHeight)
     	this.redraw()
-	},
+	}
 
-	redraw: function()
+	this.redraw = function()
 	{
-		// TODO set matrix
-		// TODO POO
-		drawStuff()
+		if(this.onDraw)
+		{
+			this.onDraw()
+		}
 	}
 
 }

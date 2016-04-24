@@ -22,8 +22,8 @@ function drawStuff() {
      }
 	
 
-     CanvasDisplay.clear("rgb(0,0,0)")
-     CanvasDisplay.begin()
+     display.clear("rgb(0,0,0)")
+     display.begin()
 	
 
 
@@ -267,7 +267,7 @@ function drawStuff() {
 			angle = Math.atan2(dy, dx)
 			l = Math.sqrt(dx*dx+dy*dy)
 
-			scale = 1 / CanvasDisplay.scale
+			scale = 1 / display.scale
 
 			ctx.save();
 			ctx.fillStyle = "orange" // ctx.createLinearGradient(0, 0, l, 0);
@@ -318,7 +318,7 @@ function drawStuff() {
     	ctx.fillStyle = "rgb(255,255,255)";
 
 		size = 10
-		scale = 1 / CanvasDisplay.scale // size / box.w
+		scale = 1 / display.scale // size / box.w
 		ctx.save();
 		ctx.translate(box.x, box.y - box.h * scale)
 		ctx.scale(scale, scale)

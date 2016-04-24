@@ -146,8 +146,11 @@ TODO :
 <canvas id="canvas" width="100" height="100" draggable="false"></canvas>
 <script>
 
-var canvas = document.getElementById("canvas")
+var canvas = $('#canvas')[0]
 var ctx = canvas.getContext("2d");
+var display = new CanvasDisplay(canvas)
+display.onDraw = drawStuff
+display.onClick = clickGraph
 
 var player = new AlgoPlayer()
 player.stepPerSeconds = 10
@@ -156,7 +159,7 @@ function recreateGraph()
 {
 	createGraph()
 	player.stop()
-	CanvasDisplay.resize()
+	display.resize()
 }
 
 function updateGraph()
@@ -174,7 +177,7 @@ $('#sizeSlider').on('change', function () {
 	gridHeight = this.value
 	gridWidth = Math.floor(window.innerWidth * gridHeight / window.innerHeight)
 	recreateGraph()
-	CanvasDisplay.changeSize(gridWidth, gridHeight)
+	display.changeSize(gridWidth, gridHeight)
 });
 
 
@@ -200,7 +203,7 @@ $('#optDiagLinks').on('change', function () {
 });
 
 $('#btResetTransform').on('click', function () {
-    CanvasDisplay.reset()
+    display.reset()
 });
 
 $('#btShowHideDetails').on('click', function () {
@@ -253,10 +256,11 @@ $('#btNext').on('click', function () {
 });
 
 $(function() {
+	display.init()
 	gridHeight = 30
 	gridWidth = Math.floor(window.innerWidth * gridHeight / window.innerHeight)
 	recreateGraph()
-	CanvasDisplay.changeSize(gridWidth, gridHeight)
+	display.changeSize(gridWidth, gridHeight)
 
 	player.algo = AStarAlgo
 	player.start()	
