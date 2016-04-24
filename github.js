@@ -111,6 +111,9 @@ var Github = function(username, password){
 	this.searchUserRepositories = function(user, callback){
 		return this.search.repositories({q: "user:" + user}, callback)
 	}
+	this.searchRepositoryIssues = function(user, repository, callback){
+		return this.search.issues({q: "repo:" + user + "/" + repository, sort: "created", order: "asc"}, callback)
+	}
 
 	// HTTP API
 

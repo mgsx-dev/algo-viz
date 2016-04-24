@@ -72,6 +72,9 @@
 </div>
 
 <script>
+
+// TODO perf issue (memory) : keep only what we really need !
+
 var canvas = document.getElementById("canvas")
 var ctx = canvas.getContext("2d");
 
@@ -139,8 +142,8 @@ $('#optRepo').on('change', function () {
 	direction = null
 	// TODO clear viz !
 	fetchCommits()
+	fetchIssues()
 	relTime = 0
-	index = 0
 	commitsFlow = []
 	sequence = {
 		tracks: []
@@ -150,8 +153,6 @@ $('#optRepo').on('change', function () {
 });
 
 
-commitsBySHA = {}
-
 commitsFlow = []
 
 
@@ -160,6 +161,54 @@ var direction = {
 }
 
 var downloadTimer = null
+
+var issueTimer = null
+
+var issuesDirection = null
+
+function fetchIssues()
+{
+	window.clearTimeout(issueTimer)
+	issueTimer = null
+	if(downloading)
+	{
+		downloadCount += 1
+		if(issuesDirection == null)
+		{
+			gh.searchRepositoryIssues($('#ghAccount')[0].value, $('#optRepo')[0].value, receiveIssues)
+		}
+		else
+		{
+			if(!gh.get(issuesDirection.next, receiveIssues))
+			{
+				// start()
+			}
+		}
+	}
+}
+
+var allIssues = []
+
+function receiveIssues(issues, meta)
+{
+	for(var i in issues.items)
+	{
+		issue = issues.items[i]
+		crDate = issue.created_at ? new Date(issue.created_at) : null
+		clDate = issue.closed_at ? new Date(issue.closed_at) : null
+		allIssues.push({created_at: crDate, closed_at: clDate})
+	}
+
+	issuesDirection = meta
+
+	if(issuesDirection.next)
+	{
+		if(issueTimer == null)
+		{
+			issueTimer = window.setTimeout(fetchIssues, 10)
+		}
+	}
+}
 
 function fetchCommits()
 {
@@ -197,23 +246,12 @@ function receiveCommits(commits, meta)
 
 	for(var i in commits)
 	{
-		commit = commits[i]
-		// if(!commit.author)
-		// {
-		// 	console.error(commit)
-		// }
-		
-		c = {
-			index: commitsFlow.length, 
-			sha: commit.sha, 
-			parents: commit.parents, 
-			id: commit.commit.author.name, 
-			message: commit.commit.message, 
-			author: commit.commit.author.name, 
+		commit = commits[i]		
+		c = {  
+			id: commit.commit.author.name,  
 			date: new Date(commit.commit.author.date)
 		}
 		commitsFlow.push(c)
-		commitsBySHA[commit.sha] = c
 	}
   	
 	if(direction.next)
@@ -236,8 +274,6 @@ function start()
 	{
 		c = commitsFlow[commitsFlow.length - 1 - i]
 
-		
-
 		var a = 0
 		if(commiters[c.id])
 		{
@@ -254,21 +290,27 @@ function start()
 			{
 				track.notes.push({commits: [c]})
 			}
+			track.commitCount++
 		}
-		else if(ccount < 8 * 3) // XXX hard limit
+		else if(ccount < 8 * 24)
 		{
 			a = commiters[c.id] = ccount++
-			sequence.tracks.push({notes: [{commits: [c]}]})
+			sequence.tracks.push({notes: [{commitCount: 1, commits: [c]}]})
 		}
-
 	}
+
+	// sequence.tracks.sort(function(a,b){b.commitCount-a.commitCount})
+
+	// while(sequence.tracks.length > 8)
+	// {
+	// 	sequence.tracks.pop
+	// }
 
 }
 
+// TODO group commiters when there is too many :
+// with 8 voices : keep 6 for big commiters and dispatch others on 2 remaining voices (birds)
 
-
-var prev = null
-var index = 0
 
 var mainloop = function() {
     drawGame();
@@ -356,6 +398,26 @@ function drawGame()
 		}
 	}
 
+	ctx.fillStyle = "rgba(127,127,127,0.1)"
+
+	for(var i in allIssues)
+	{
+		var issue = allIssues[i]
+
+
+		var ih = canvas.height - 100
+
+		var timeStart = issue.created_at
+		var timeEnd = issue.closed_at
+
+		x = pixPerDay * (timeStart - timeBase) / (1000 * 60 * 60 * 24)
+		w = timeEnd ? Math.max(1, pixPerDay * (timeEnd - timeStart) / (1000 * 60 * 60 * 24)) : x + 2
+		y = ih
+		h = 30
+
+		ctx.fillRect(x, y, w, h)
+	}
+
 
 	for(var trackIndex in sequence.tracks)
 	{
@@ -397,7 +459,7 @@ function drawGame()
 			absSec = ((note.commits[0].date - timeBase) / (1000 * 60 * 60 * 24)) / dayPerSec
 			if(absSec < pos)
 			{
-				// TODO play lower some very long notes to avoid saturation ...
+				// TODO play lower some very long notes to avoid saturation ... and maybe a higher attack
 				// console.log("track " + audioTrack + " note on " + track.noteIndex)
 				track.noteOffIndex = track.noteIndex
 				Pd.send("t" + audioTrack, [1, 50])
