@@ -1,6 +1,6 @@
 var canvas = null
 var display = null
-var gridH = 20
+var gridH = 7
 var gridW = gridW = Math.floor(window.innerWidth * gridH / window.innerHeight)
 var player = null
 var nodes = null
@@ -35,7 +35,7 @@ $(function() {
 		step: step,
 		draw: draw,
 	}
-	player.stepPerSeconds = 12
+	player.stepPerSeconds = 8
 	player.start()
 
 	$('#sliderSize').change(function(){
@@ -47,7 +47,14 @@ $(function() {
 	})
 });
 
+// TODO auto resize at each player run !
+		// gridH = Math.floor(Math.random() * Math.random() * 12) + 3
+		// gridW = Math.floor(window.innerWidth * gridH / window.innerHeight)
+		// display.changeSize(gridW, gridH)
+		// reset()
+
 function reset(){
+
 	insider = null
 	insiders = []
 	pickCounter = 0
@@ -70,7 +77,6 @@ function reset(){
 }
 
 function init(){
-
 }
 
 function findLen(x, y, dx, dy){
@@ -113,7 +119,7 @@ function findLenInside(x, y, dx, dy){
 function step(){
 
 	// start at 0 to leave introdution
-	if(pickCounter % (2*(1+Math.floor(Math.random() * 8))) == 0)
+	if((current == null || pickCounter % (2*(1+Math.floor(Math.random() * 8))) == 0) && unvisited.length >0)
 	{
 		var node = unvisited.splice(Math.floor(Math.random() * unvisited.length), 1)[0]
 		node.visited = true
@@ -123,25 +129,27 @@ function step(){
 	}
 	pickCounter++ 
 	
-	if(insider == null && insiders.length > 0 && pickCounter % (2*(1+Math.floor(Math.random() * 8))) == 0)
+	if(insider == null && insiders.length > 0 && pickCounter % (2*(1+Math.floor(Math.random() * 16))) == 0)
 	{
 		insider = insiders.splice(Math.floor(Math.random() * insiders.length), 1)[0]
 		insider.inside = true
-		Pd.send("ins", [Math.random() * 10])
-		var gx = Math.floor(Math.random() * gridW) / 6 + 1
-		var gy = Math.floor(Math.random() * gridH)/ 6 + 1
+		var cnt = 0
+		var gx = Math.floor(Math.random() * gridW)  + 1
+		var gy = Math.floor(Math.random() * gridW) + 1
 		for(var cy=0 ; cy<gy ; cy++)
 		{
 			for(var cx=0 ; cx<gx ; cx++)
 			{
-				var x = insider.x + cx
-				var y = insider.y + cy
+				var x = (insider.x + cx) % gridW
+				var y = (insider.y + cy) % gridH
 				if(x<0||x>=gridW||y<0||y>=gridH)
 					{}else{
 						nodes[y][x].pole = !nodes[y][x].pole
+						if(nodes[y][x].visited) cnt++
 					}
 			}
 		}
+		Pd.send("ins", [Math.random() * 10, 0.6 + 0.4 * cnt / (gx * gy) ])
 		insider = null
 	}
 	if(false && insider != null)
@@ -269,6 +277,7 @@ function draw()
 			var cellSize = 0.3
 			//var cellMargin = (1 - cellSize)/2
 			var node = nodes[y][x]
+			if(!node) continue
 			if(node.picked)
 			{
 				cellSize = 0.4
@@ -281,13 +290,13 @@ function draw()
 			}
 			else if(node.pole)
 			{
-				ctx.fillStyle = "rgb(70,70,80)"
+				ctx.fillStyle = "rgb(50,50,60)"
 			}
 			else
 			{
 				ctx.fillStyle = "rgb(40,40,40)"
 			}
-			cellSize = node.pole ? cellSize * 1.3 : cellSize
+			cellSize = node.pole ? cellSize * 1.1 : cellSize
 			var cellMargin = (1 - cellSize)/2
 			ctx.fillRect(x+cellMargin, y+cellMargin, cellSize, cellSize)
 		}	
