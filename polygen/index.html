@@ -1,0 +1,188 @@
+<html>
+<head>
+	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-hQpvDQiCJaD2H465dQfA717v7lu5qHWtDbWNPvaTJ0ID5xnPUlVXnKzq7b8YUkbN" crossorigin="anonymous">
+	<script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
+
+	<link href="../style.css" rel="stylesheet">
+
+	<script src="../webpd.js"></script>
+	<script src="../utils.js"></script>
+	<script src="../algo-player.js"></script>
+	<script src="../canvas-display.js"></script>
+	<script src="../panel.js"></script>
+
+</head>
+<body>
+	<div id="panel">
+		<div>
+			<button id="panelButton" class="fa fa-gears fa-4x"></button>
+			<label id="panelTitle">Template</label>
+		</div>
+		<div id="panelDetails">
+			<div class="field">
+				<i class="fa fa-clock-o fa-2x"></i>
+				<label>Field label</label>
+				<i class="fa fa-tachometer fa-2x"></i>
+				<input id="slider" type="range" min="1" max="100" value="50">
+			</div>
+		</div>
+	</div>
+	<canvas id="canvas"></canvas>
+
+<script>
+
+
+$(function() {
+	canvas = $('#canvas')[0]
+	display = new CanvasDisplay(canvas)
+	display.init()
+	display.changeSize(1, 1)
+	display.onDraw = draw
+	display.resize()
+
+	player = new AlgoPlayer()
+	player.algo = {
+		init: init,
+		reset: reset,
+		step: step,
+		draw: draw,
+	}
+	player.stepPerSeconds = 2
+	//player.start()
+
+	$('#sliderSize').change(function(){
+		gridH = this.value
+		gridW = Math.floor(window.innerWidth * gridH / window.innerHeight)
+		player.stop()
+		display.changeSize(gridW, gridH)
+		player.start()
+	})
+});
+
+var Vec2 = {
+	len: function(a,b){
+		var dx = a[0] - b[0]
+		var dy = a[1] - b[1]
+		return Math.sqrt(dx*dx+dy*dy)
+	}
+}
+
+var polys = [{points: [[0,0], [1,0], [1,1], [0,1]]}]
+var pID = 0
+
+function init()
+{
+
+}
+
+function reset()
+{
+	pID = 0
+	polys = [{points: [[0,0], [1,0], [1,1], [0,1]]}]
+}
+
+function step()
+{
+	// polys.push({points: [[0,0], [Math.random(),0], [Math.random(),Math.random()], [0,Math.random()]]})
+	var polyFunc = [
+		function (){return polys[Math.floor(Math.random() * polys.length)]},
+		function (){
+			var lengths = []
+
+			for(var p in polys)
+			{
+				var poly = polys[p]
+				var d = 0
+				for(var i in poly.points){
+					var a = poly.points[i]
+					var b = poly.points[(i+1)%poly.points.length]
+					d += Vec2.len(a, b)
+				}
+				lengths.push(d)
+			}
+			return polys[lengths.indexOf(Math.max.apply(null, lengths))]
+		},
+		function(){
+			var poly= polys[pID]
+			pID = (pID-1+polys.length)%polys.length
+			return poly
+		},
+		// TODO poly func by size : biggest first
+	][2]
+
+	var edgeFunc = [
+		function (poly){return Math.floor(Math.random() * poly.points.length)},
+		function (poly){
+			var lengths = []
+			for(var i in poly.points){
+				var a = poly.points[i]
+				var b = poly.points[(i+1)%poly.points.length]
+				lengths.push(Vec2.len(a, b))
+			}
+			return lengths.indexOf(Math.max.apply(null, lengths))
+		}
+	][1]
+
+	var poly = polyFunc()
+
+	var edgeIndex = edgeFunc(poly)
+
+	var a = poly.points[edgeIndex]
+	var b = poly.points[(edgeIndex+1)%poly.points.length]
+
+	var t = Math.random()
+	var c = [a[0] * t + b[0] * (1-t), a[1] * t + b[1] * (1-t)]
+	
+	var N = poly.points.length
+	
+	var splitIndex = (edgeIndex + 2 + Math.floor(Math.random() * (N - 3)))%N
+
+	var ptsA = [c]
+	var ptsB = [c]
+	
+	for(var i=(splitIndex)%N ; i!=(edgeIndex+1)%N ; i=(i+1)%N)
+	{
+		ptsA.push(poly.points[i])
+	}
+	for(var i=(edgeIndex+1)%N ; i!=(splitIndex+1)%N ; i=(i+1)%N)
+	{
+		ptsB.push(poly.points[i])
+	}
+
+	poly.points = ptsA
+	polys.push({points: ptsB})
+
+	return true;
+}
+
+
+function draw()
+{
+	display.clear("rgb(0,0,0)")
+	display.begin()
+
+	ctx = canvas.getContext("2d");
+	ctx.strokeStyle = "rgb(158,0,0)"
+	ctx.lineWidth = 0.01
+	for(var i in polys)
+	{
+		var poly = polys[i]
+		var p = poly.points[0]
+		ctx.beginPath()
+		ctx.moveTo(p[0], p[1])
+		for(var j=1 ; j<poly.points.length ; j++){
+			p = poly.points[j]
+			ctx.lineTo(p[0], p[1])
+		}
+		p = poly.points[0]
+		ctx.lineTo(p[0], p[1])
+		ctx.stroke()
+		
+	}
+
+}
+
+
+</script>
+</body>
+</html>
