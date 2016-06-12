@@ -1,0 +1,170 @@
+<html>
+<head>
+	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-hQpvDQiCJaD2H465dQfA717v7lu5qHWtDbWNPvaTJ0ID5xnPUlVXnKzq7b8YUkbN" crossorigin="anonymous">
+	<script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
+
+	<link href="../style.css" rel="stylesheet">
+
+	<script src="../webpd.js"></script>
+	<script src="../utils.js"></script>
+	<script src="../algo-player.js"></script>
+	<script src="../canvas-display.js"></script>
+	<script src="../panel.js"></script>
+
+</head>
+<body>
+	<div id="panel">
+		<div>
+			<button id="panelButton" class="fa fa-gears fa-4x"></button>
+			<label id="panelTitle">Template</label>
+		</div>
+		<div id="panelDetails">
+			<div class="field">
+				<i class="fa fa-clock-o fa-2x"></i>
+				<label>Field label</label>
+				<i class="fa fa-tachometer fa-2x"></i>
+				<input id="formula" type="text">
+			</div>
+		</div>
+	</div>
+	<canvas id="canvas"></canvas>
+
+<script>
+
+var formula = "LL.RRR.."
+var formIndex = 0
+
+$(function() {
+	canvas = $('#canvas')[0]
+	display = new CanvasDisplay(canvas)
+	display.init()
+	display.changeSize(20, 20)
+	display.onDraw = draw
+	display.resize()
+
+	player = new AlgoPlayer()
+	player.algo = {
+		init: init,
+		reset: reset,
+		step: step,
+		draw: draw,
+	}
+	player.stepPerSeconds = 20
+	//player.start()
+	$('#formula').val(formula)
+	$('#formula').change(function(){
+		formula = this.value
+		
+		player.stop()
+		
+		player.start()
+	})
+
+	player.start()
+});
+
+var Vec2 = {
+	len: function(a,b){
+		var dx = a[0] - b[0]
+		var dy = a[1] - b[1]
+		return Math.sqrt(dx*dx+dy*dy)
+	}
+}
+
+var point = [10,10]
+var len = 0.01
+var delta = [1,0]
+var formCount = 0;
+function init()
+{
+
+}
+
+function reset()
+{
+	ctx = canvas.getContext("2d");
+	ctx.globalCompositeOperation = "source-over";
+	display.clear("rgb(0,0,0)")
+	display.begin()
+	formIndex = 0
+	point = [10, 10]
+	delta = [1,0]
+	formCount = 0
+}
+
+function step()
+{
+	var c = formula[formIndex] // formula.charCodeAt(formIndex)
+	if(formIndex==0) formCount++
+	formIndex = (formIndex+1)%formula.length
+	var d = [delta[0], delta[1]]
+	//console.log(c)
+	//var code = c % 5
+	// console.log(code)
+	//c = ("LRBUDXD")[code]
+	var f = Math.sqrt(2) * 0.5
+	switch(c){
+		case 'L':
+			d = [-delta[1], delta[0]]
+			break
+		case 'R':
+			d = [delta[1], -delta[0]]
+			break
+		case 'B':
+			d = [-delta[0], -delta[1]]
+			break
+		case 'E':
+			d = [delta[0] * f + delta[1] * f, delta[0] * f - delta[1] * f]
+			break
+		case 'W':
+			d = [-delta[0] * f - delta[1] * f, - delta[0] * f + delta[1] * f]
+			break
+		case 'U':
+			d = [delta[0] + 0.1, delta[1] - 0.1]
+			break
+		case 'T':
+			d = [delta[0] - 0.1, delta[1] + 0.1]
+			break
+		case 'X':
+			d = [delta[0]*0.5, delta[1]*0.5]
+			break
+		case 'D':
+			d = [delta[0]*2, delta[1]*2]
+			break
+	} 
+	delta = d
+
+	ctx = canvas.getContext("2d");
+	ctx.globalCompositeOperation = "lighter";
+	ctx.strokeStyle = "rgba(255,40,20,0.5)"
+	ctx.lineWidth = 0.05//0.1 + 0.01 * formCount
+	ctx.beginPath()
+	ctx.moveTo(point[0], point[1])
+	point = [point[0] + delta[0], point[1] + delta[1]]
+	ctx.lineTo(point[0], point[1])
+	ctx.stroke()
+	
+	ctx.beginPath();
+    ctx.arc(point[0], point[1], 0.1 /*+ 0.02 * formCount*/, 0, 2 * Math.PI, false);
+    ctx.fillStyle = "rgba(255,40,20,0.5)";
+    ctx.fill();
+
+    point[0] = (point[0] % 20 + 20) % 20
+    point[1] = (point[1] % 20 + 20) % 20
+
+	return true;
+}
+
+
+function draw()
+{
+	
+	
+
+
+}
+
+
+</script>
+</body>
+</html>
